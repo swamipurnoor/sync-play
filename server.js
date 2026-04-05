@@ -5,7 +5,7 @@ const fs     = require('fs');
 const path   = require('path');
 
 const PORT   = process.env.PORT || 3000;
-const PUBLIC = path.join(__dirname, 'public');
+const PUBLIC = __dirname;
 const rooms  = new Map(); // roomId → Set<socket>
 const MIME   = { '.html':'text/html; charset=utf-8', '.css':'text/css', '.js':'text/javascript', '.ico':'image/x-icon' };
 const WS_MAGIC = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
