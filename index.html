@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SyncWatch</title>
+
+  <!-- Firebase compat SDK (v10) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #080810;
+      --surface:     #10101c;
+      --surface2:    #18182a;
+      --border:      #252535;
+      --accent:      #e8a020;
+      --accent-glow: rgba(232, 160, 32, 0.18);
+      --text:        #e4e4f0;
+      --muted:       #6a6a88;
+      --success:     #3dd68c;
+      --error:       #ff5f5f;
+      --font-d:      'Syne', sans-serif;
+      --font-b:      'DM Sans', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-b);
+      font-size: 15px;
+      line-height: 1.6;
+      overflow: hidden;
+    }
+
+    /* ── SCREENS ─────────────────────────────────────── */
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .screen.active { display: flex; }
+
+    /* ── HOME ────────────────────────────────────────── */
+    #home-screen {
+      background:
+        radial-gradient(ellipse 70% 45% at 50% 0%, rgba(232,160,32,0.08) 0%, transparent 65%),
+        var(--bg);
+    }
+
+    .logo {
+      font-family: var(--font-d);
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .logo span { color: var(--accent); }
+
+    .tagline {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 300;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 44px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 360px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px 22px;
+    }
+
+    .card-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 22px 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── FORM ELEMENTS ───────────────────────────────── */
+    input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 16px;
+      color: var(--text);
+      font-family: var(--font-b);
+      font-size: 1.05rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]::placeholder {
+      letter-spacing: 0.05em;
+      text-transform: none;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-family: var(--font-d);
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0806;
+    }
+    .btn-primary:hover:not(:disabled) { background: #f5b030; }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      margin-top: 12px;
+    }
+    .btn-secondary:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+
+    /* ── LOBBY ───────────────────────────────────────── */
+    #lobby-screen {
+      background:
+        radial-gradient(ellipse 60% 35% at 50% 0%, rgba(61,214,140,0.06) 0%, transparent 60%),
+        var(--bg);
+      gap: 20px;
+      justify-content: flex-start;
+      padding-top: 40px;
+    }
+
+    .lobby-logo {
+      font-family: var(--font-d);
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .lobby-logo span { color: var(--accent); }
+
+    .code-block {
+      text-align: center;
+    }
+    .code-block-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .code-value {
+      font-family: var(--font-d);
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      cursor: pointer;
+      transition: opacity 0.2s;
+      user-select: all;
+    }
+    .code-value:active { opacity: 0.6; }
+    .code-hint {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 4px;
+      letter-spacing: 0.04em;
+    }
+
+    .peers-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      width: 100%;
+      max-width: 380px;
+    }
+    .peer-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 14px 12px;
+    }
+    .peer-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .peer-card-name {
+      font-family: var(--font-d);
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .role-tag {
+      font-size: 0.68rem;
+      padding: 2px 7px;
+      border-radius: 20px;
+      background: var(--accent-glow);
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .peer-status-text {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .peer-status-text.ready { color: var(--success); }
+
+    .file-drop {
+      width: 100%;
+      max-width: 380px;
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .file-drop:hover:not(.loaded) {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+    .file-drop.loaded {
+      border-color: var(--success);
+      border-style: solid;
+      background: rgba(61, 214, 140, 0.05);
+    }
+    .file-drop-icon { font-size: 2.2rem; margin-bottom: 8px; }
+    .file-drop-title {
+      font-weight: 500;
+      font-size: 0.95rem;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .file-drop-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .file-loaded-name {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: var(--success);
+      font-weight: 500;
+      word-break: break-all;
+      padding: 0 8px;
+    }
+
+    .waiting-note {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+      max-width: 320px;
+      line-height: 1.5;
+    }
+    .waiting-note strong { color: var(--text); }
+
+    /* ── PLAYER ──────────────────────────────────────── */
+    #player-screen {
+      background: #000;
+      padding: 0;
+      justify-content: flex-start;
+    }
+
+    #video-wrapper {
+      position: relative;
+      width: 100%;
+      flex: 1;
+      background: #000;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    #main-video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    #tap-overlay {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+    }
+
+    /* Sync badge */
+    #sync-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(232,160,32,0.92);
+      color: #0a0806;
+      font-family: var(--font-d);
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 4px 11px;
+      border-radius: 20px;
+      opacity: 0;
+      transition: opacity 0.35s;
+      pointer-events: none;
+      letter-spacing: 0.07em;
+    }
+    #sync-badge.show { opacity: 1; }
+
+    /* Big play/pause icon on tap */
+    #tap-icon {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+    #tap-icon.show { opacity: 1; }
+    #tap-icon-inner {
+      font-size: 4rem;
+      background: rgba(0,0,0,0.55);
+      border-radius: 50%;
+      width: 90px;
+      height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Buffering spinner */
+    #buffering {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.45);
+      pointer-events: none;
+    }
+    #buffering.show { display: flex; }
+    .spinner {
+      width: 42px;
+      height: 42px;
+      border: 3px solid rgba(255,255,255,0.12);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Controls bar */
+    #controls {
+      flex-shrink: 0;
+      background: linear-gradient(to bottom, #0d0d16, #111120);
+      border-top: 1px solid var(--border);
+      padding: 10px 14px 18px;
+    }
+
+    /* Seek bar */
+    #seek-wrap { margin-bottom: 10px; }
+    #seek-bar {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+      background: linear-gradient(
+        to right,
+        var(--accent) 0%,
+        var(--accent) var(--prog, 0%),
+        #252535 var(--prog, 0%),
+        #252535 100%
+      );
+    }
+    #seek-bar::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(232,160,32,0.6);
+    }
+
+    /* Buttons row */
+    .ctrl-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ic-btn {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.35rem;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 8px;
+      line-height: 1;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ic-btn:hover { background: var(--surface2); }
+    .ic-btn:active { transform: scale(0.88); }
+    .ic-btn.big { font-size: 1.65rem; padding: 4px 8px; }
+
+    .time-info {
+      font-family: var(--font-d);
+      font-size: 0.8rem;
+      color: var(--muted);
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+    }
+    .time-info .cur { color: var(--text); }
+
+    .spacer { flex: 1; }
+
+    .sync-pill {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+    }
+    .sync-pill .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 5px var(--success);
+    }
+    .sync-pill .dot.off { background: var(--muted); box-shadow: none; }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: var(--error);
+      color: #fff;
+      padding: 9px 18px;
+      border-radius: 10px;
+      font-size: 0.83rem;
+      font-weight: 500;
+      z-index: 9999;
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════ HOME -->
+<div class="screen active" id="home-screen">
+  <div class="logo">Sync<span>Watch</span></div>
+  <div class="tagline">Watch together · perfectly in sync</div>
+
+  <div class="card">
+    <div class="card-label">Create a room</div>
+    <button class="btn btn-primary" onclick="createRoom()">Create Room</button>
+
+    <div class="divider">or join existing</div>
+
+    <input type="text" id="join-input" placeholder="Enter room code" maxlength="6" />
+    <button class="btn btn-secondary" onclick="joinRoom()">Join Room</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ LOBBY -->
+<div class="screen" id="lobby-screen">
+  <div class="lobby-logo">Sync<span>Watch</span></div>
+
+  <div class="code-block">
+    <div class="code-block-label">Room Code</div>
+    <div class="code-value" id="code-display" onclick="copyCode()">------</div>
+    <div class="code-hint">Tap to copy · share with your friend</div>
+  </div>
+
+  <div class="peers-grid">
+    <div class="peer-card">
+      <div class="peer-card-header">
+        <span class="peer-card-name">You</span>
+        <span class="role-tag" id="my-role-tag">Host</span>
+      </div>
+      <div class="peer-status-text" id="my-status">Waiting for video…</div>
+    </div>
+    <div class="peer-card">
+      <div class="peer-card-header">
+        <span class="peer-card-name">Friend</span>
+      </div>
+      <div class="peer-status-text" id="friend-status">Not joined yet</div>
+    </div>
+  </div>
+
+  <div class="file-drop" id="file-drop" onclick="pickFile()">
+    <div class="file-drop-icon">🎬</div>
+    <div class="file-drop-title">Load your video</div>
+    <div class="file-drop-sub">MP4 · MKV · WebM · AVI · MOV</div>
+    <div class="file-loaded-name" id="file-loaded-name"></div>
+  </div>
+  <input type="file" id="file-input" accept="video/*,.mkv,.avi,.mov,.flv,.wmv" style="display:none" />
+
+  <div class="waiting-note" id="lobby-note">
+    Both people load their <strong>copy of the same file</strong> — playback starts automatically when both are ready.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ PLAYER -->
+<div class="screen" id="player-screen">
+  <div id="video-wrapper">
+    <video id="main-video" playsinline preload="metadata"></video>
+    <div id="tap-overlay" onclick="handleTap()"></div>
+    <div id="sync-badge">SYNCED</div>
+    <div id="tap-icon"><div id="tap-icon-inner">▶</div></div>
+    <div id="buffering"><div class="spinner"></div></div>
+  </div>
+
+  <div id="controls">
+    <div id="seek-wrap">
+      <input type="range" id="seek-bar" min="0" max="100" step="0.05" value="0" />
+    </div>
+    <div class="ctrl-row">
+      <button class="ic-btn" onclick="skipBy(-10)" title="-10s">⏪</button>
+      <button class="ic-btn big" id="play-btn" onclick="handlePlayPause()">▶</button>
+      <button class="ic-btn" onclick="skipBy(10)" title="+10s">⏩</button>
+      <span class="time-info"><span class="cur" id="cur-time">0:00</span> / <span id="dur-time">0:00</span></span>
+      <div class="spacer"></div>
+      <div class="sync-pill">
+        <div class="dot" id="sync-dot"></div>
+        <span id="sync-label">Synced</span>
+      </div>
+      <button class="ic-btn" id="mute-btn" onclick="toggleMute()" title="Mute">🔊</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast"></div>
+
+<script>
+  // ══════════════════════════════════════════ FIREBASE CONFIG
+  // Replace all values below with your own Firebase project config
+  const FIREBASE_CONFIG = {
+    apiKey:            "YOUR_API_KEY",
+    authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+    projectId:         "YOUR_PROJECT_ID",
+    storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId:             "YOUR_APP_ID"
+  };
+
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const db = firebase.database();
+
+  // ══════════════════════════════════════════ APP STATE
+  const S = {
+    uid:        null,   // this user's random ID
+    role:       null,   // 'host' | 'guest'
+    roomId:     null,
+    file:       null,   // local video File object
+    syncing:    false,  // true while applying a remote event (blocks echo)
+    lastPush:   0,      // timestamp of our last pushSync call
+    driftTimer: null,
+    muted:      false,
+  };
+
+  // ══════════════════════════════════════════ UTILITIES
+
+  const $ = id => document.getElementById(id);
+
+  function uid8()     { return Math.random().toString(36).substring(2, 10).toUpperCase(); }
+  function roomCode() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
+
+  function fmt(s) {
+    if (!s || isNaN(s)) return '0:00';
+    const h   = Math.floor(s / 3600);
+    const m   = Math.floor((s % 3600) / 60);
+    const sec = Math.floor(s % 60);
+    return h > 0
+      ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+      : `${m}:${String(sec).padStart(2,'0')}`;
+  }
+
+  function toast(msg, duration = 4000) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), duration);
+  }
+
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(`${name}-screen`).classList.add('active');
+  }
+
+  function flashSynced() {
+    const b = $('sync-badge');
+    b.classList.add('show');
+    setTimeout(() => b.classList.remove('show'), 1400);
+  }
+
+  function showTapIcon(icon) {
+    const wrap  = $('tap-icon');
+    const inner = $('tap-icon-inner');
+    inner.textContent = icon;
+    wrap.classList.add('show');
+    setTimeout(() => wrap.classList.remove('show'), 500);
+  }
+
+  // ══════════════════════════════════════════ HOME
+
+  async function createRoom() {
+    S.uid    = uid8();
+    S.role   = 'host';
+    S.roomId = roomCode();
+
+    try {
+      await db.ref(`rooms/${S.roomId}`).set({
+        host:  S.uid,
+        guest: null,
+        playback: {
+          isPlaying: false,
+          position:  0,
+          updatedAt: firebase.database.ServerValue.TIMESTAMP,
+          updatedBy: S.uid,
+        },
+        members: {
+          [S.uid]: { ready: false },
+        },
+      });
+
+      $('code-display').textContent = S.roomId;
+      $('my-role-tag').textContent  = 'Host';
+      showScreen('lobby');
+      listenLobby();
+    } catch (e) {
+      toast('Firebase error — check your config in index.html');
+      console.error(e);
+    }
+  }
+
+  async function joinRoom() {
+    const code = $('join-input').value.trim().toUpperCase();
+    if (code.length !== 6) { toast('Enter a 6-character room code'); return; }
+
+    S.uid    = uid8();
+    S.role   = 'guest';
+    S.roomId = code;
+
+    try {
+      const snap = await db.ref(`rooms/${code}`).once('value');
+      const room = snap.val();
+      if (!room)      { toast('Room not found — double-check the code'); return; }
+      if (room.guest) { toast('Room is already full'); return; }
+
+      await db.ref(`rooms/${code}/guest`).set(S.uid);
+      await db.ref(`rooms/${code}/members/${S.uid}`).set({ ready: false });
+
+      $('code-display').textContent = code;
+      $('my-role-tag').textContent  = 'Guest';
+      showScreen('lobby');
+      listenLobby();
+    } catch (e) {
+      toast('Firebase error — check your config in index.html');
+      console.error(e);
+    }
+  }
+
+  function copyCode() {
+    navigator.clipboard?.writeText(S.roomId).then(() => {
+      const el = $('code-display');
+      el.textContent = 'COPIED!';
+      setTimeout(() => el.textContent = S.roomId, 1600);
+    });
+  }
+
+  // ══════════════════════════════════════════ LOBBY
+
+  function listenLobby() {
+    const roomRef = db.ref(`rooms/${S.roomId}`);
+
+    // Watch for guest arriving
+    roomRef.child('guest').on('value', snap => {
+      if (snap.val() && snap.val() !== S.uid) {
+        $('friend-status').textContent   = 'Joined · waiting for video…';
+        $('friend-status').style.color   = 'var(--muted)';
+      }
+    });
+
+    // Watch member readiness
+    roomRef.child('members').on('value', snap => {
+      const members = snap.val();
+      if (!members) return;
+
+      const myReady     = !!members[S.uid]?.ready;
+      const friendId    = Object.keys(members).find(id => id !== S.uid);
+      const friendReady = friendId ? !!members[friendId]?.ready : false;
+
+      // Update our own card
+      $('my-status').textContent  = myReady ? '✅ Ready' : 'Waiting for video…';
+      $('my-status').className    = 'peer-status-text' + (myReady ? ' ready' : '');
+
+      // Update friend card
+      if (friendId) {
+        $('friend-status').textContent = friendReady ? '✅ Ready' : 'Loading video…';
+        $('friend-status').className   = 'peer-status-text' + (friendReady ? ' ready' : '');
+      }
+
+      // Both ready with 2 members → launch
+      const allReady = Object.keys(members).length >= 2 &&
+                       Object.values(members).every(m => m.ready);
+      if (allReady && S.file) launchPlayer();
+    });
+  }
+
+  function pickFile() {
+    $('file-input').click();
+  }
+
+  $('file-input').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    S.file = file;
+    $('file-drop').classList.add('loaded');
+    $('file-drop-icon') && ($('file-drop').querySelector('.file-drop-icon').textContent = '✅');
+    $('file-loaded-name').textContent = file.name;
+
+    await db.ref(`rooms/${S.roomId}/members/${S.uid}/ready`).set(true);
+    $('my-status').textContent = '✅ Ready';
+    $('my-status').className   = 'peer-status-text ready';
+  });
+
+  // ══════════════════════════════════════════ PLAYER LAUNCH
+
+  function launchPlayer() {
+    if (!S.file) return;
+
+    const video = $('main-video');
+    video.src   = URL.createObjectURL(S.file);
+    video.load();
+
+    showScreen('player');
+    bindVideoEvents();
+    initSync();
+  }
+
+  // ══════════════════════════════════════════ VIDEO EVENTS
+
+  function bindVideoEvents() {
+    const video    = $('main-video');
+    const seekBar  = $('seek-bar');
+
+    video.addEventListener('timeupdate', () => {
+      if (isNaN(video.duration)) return;
+      const pct = (video.currentTime / video.duration) * 100;
+      seekBar.value = pct;
+      seekBar.style.setProperty('--prog', pct + '%');
+      $('cur-time').textContent = fmt(video.currentTime);
+    });
+
+    video.addEventListener('loadedmetadata', () => {
+      $('dur-time').textContent = fmt(video.duration);
+    });
+
+    video.addEventListener('play',  () => { $('play-btn').textContent = '⏸'; });
+    video.addEventListener('pause', () => { $('play-btn').textContent = '▶'; });
+
+    video.addEventListener('waiting', () => $('buffering').classList.add('show'));
+    video.addEventListener('playing', () => $('buffering').classList.remove('show'));
+    video.addEventListener('canplay', () => $('buffering').classList.remove('show'));
+
+    video.addEventListener('error', () => {
+      toast('Cannot play this file. Try re-encoding to H.264 + AAC if using MKV.');
+    });
+
+    // Seek bar
+    seekBar.addEventListener('input', () => {
+      const t = (seekBar.value / 100) * video.duration;
+      video.currentTime = t;
+      $('cur-time').textContent = fmt(t);
+    });
+
+    seekBar.addEventListener('change', () => {
+      const t = (seekBar.value / 100) * video.duration;
+      pushSync(!video.paused, t);
+    });
+
+    // Keyboard shortcuts (desktop)
+    document.addEventListener('keydown', e => {
+      if (!$('player-screen').classList.contains('active')) return;
+      if (e.code === 'Space')      { e.preventDefault(); handlePlayPause(); }
+      if (e.code === 'ArrowLeft')  { e.preventDefault(); skipBy(-10); }
+      if (e.code === 'ArrowRight') { e.preventDefault(); skipBy(10); }
+      if (e.code === 'KeyM')       { toggleMute(); }
+    });
+  }
+
+  // ══════════════════════════════════════════ CONTROLS
+
+  function handleTap() {
+    handlePlayPause();
+  }
+
+  function handlePlayPause() {
+    const video = $('main-video');
+    if (video.paused) {
+      showTapIcon('▶');
+      pushSync(true, video.currentTime);
+    } else {
+      showTapIcon('⏸');
+      pushSync(false, video.currentTime);
+    }
+  }
+
+  function skipBy(sec) {
+    const video   = $('main-video');
+    const newTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + sec));
+    video.currentTime = newTime;
+    pushSync(!video.paused, newTime);
+  }
+
+  function toggleMute() {
+    const video = $('main-video');
+    S.muted     = !S.muted;
+    video.muted = S.muted;
+    $('mute-btn').textContent = S.muted ? '🔇' : '🔊';
+  }
+
+  // ══════════════════════════════════════════ SYNC ENGINE
+
+  function initSync() {
+    // Listen to remote playback changes
+    db.ref(`rooms/${S.roomId}/playback`).on('value', snap => {
+      const data = snap.val();
+      if (!data) return;
+
+      // Suppress echo: ignore our own events received within 900ms of pushing
+      if (data.updatedBy === S.uid && (Date.now() - S.lastPush) < 900) return;
+
+      applySync(data);
+      flashSynced();
+      setSyncPill(true);
+    });
+
+    // Periodic drift correction every 8 seconds
+    S.driftTimer = setInterval(correctDrift, 8000);
+  }
+
+  /**
+   * Apply a received sync event to the local video element.
+   * Compensates for network latency by adding elapsed time to the position.
+   */
+  function applySync(data) {
+    const video = $('main-video');
+    S.syncing   = true;
+
+    // How long ago was this event generated on the sender's side?
+    const latency = Math.max(0, (Date.now() - data.updatedAt) / 1000);
+
+    // If the sender was playing, advance position by latency
+    const target = data.isPlaying
+      ? data.position + latency
+      : data.position;
+
+    // Only seek if we're significantly out of sync (avoid micro-jumps)
+    if (Math.abs(video.currentTime - target) > 0.5) {
+      video.currentTime = Math.max(0, target);
+    }
+
+    // Sync play/pause state
+    if (data.isPlaying && video.paused) {
+      video.play().catch(() => {
+        // Autoplay blocked — user needs to interact first
+        toast('Tap play to start (browser autoplay policy)');
+      });
+    } else if (!data.isPlaying && !video.paused) {
+      video.pause();
+    }
+
+    // Release sync lock after 600ms
+    setTimeout(() => { S.syncing = false; }, 600);
+  }
+
+  /**
+   * Push a local playback event to Firebase so all peers sync to it.
+   */
+  function pushSync(isPlaying, position) {
+    if (S.syncing) return;  // Don't echo incoming events
+    S.lastPush = Date.now();
+
+    db.ref(`rooms/${S.roomId}/playback`).set({
+      isPlaying,
+      position,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP,
+      updatedBy: S.uid,
+    }).catch(() => {
+      setSyncPill(false);
+      toast('Sync failed — check your connection');
+    });
+  }
+
+  /**
+   * Drift correction: every 8s, if we're playing and drifted > 2.5s,
+   * silently resync to the canonical Firebase position.
+   */
+  function correctDrift() {
+    const video = $('main-video');
+    if (video.paused) return;
+
+    db.ref(`rooms/${S.roomId}/playback`).once('value').then(snap => {
+      const data = snap.val();
+      if (!data || !data.isPlaying) return;
+
+      const elapsed  = (Date.now() - data.updatedAt) / 1000;
+      const expected = data.position + elapsed;
+      const drift    = Math.abs(video.currentTime - expected);
+
+      if (drift > 2.5) {
+        video.currentTime = expected;
+        flashSynced();
+      }
+    });
+  }
+
+  function setSyncPill(online) {
+    $('sync-dot').className   = 'dot' + (online ? '' : ' off');
+    $('sync-label').textContent = online ? 'Synced' : 'Offline';
+  }
+
+  // ══════════════════════════════════════════ CLEANUP
+  window.addEventListener('beforeunload', () => {
+    if (S.roomId && S.uid) {
+      db.ref(`rooms/${S.roomId}/members/${S.uid}`).remove();
+    }
+    clearInterval(S.driftTimer);
+  });
+</script>
+</body>
+</html>
