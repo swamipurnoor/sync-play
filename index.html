@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>SyncPlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+/* ── Variables ───────────────────────────────────────── */
+:root {
+  --bg:         #07070d;
+  --surface:    #0d0d1a;
+  --surface2:   #131324;
+  --border:     #1e1e36;
+  --accent:     #e8a030;
+  --accent-dim: rgba(232,160,48,0.15);
+  --text:       #e2e2f0;
+  --muted:      #56567a;
+  --green:      #4ade80;
+  --red:        #f87171;
+  --header-h:   52px;
+}
+
+/* ── Reset ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  height: 100%; height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--bg);
+}
+
+body {
+  height: 100%; height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button {
+  cursor: pointer; border: none; background: none;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+input {
+  font-family: inherit; outline: none;
+  -webkit-user-select: text; user-select: text;
+}
+
+.hidden { display: none !important; }
+
+/* ── LOBBY ───────────────────────────────────────────── */
+#lobby {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px 20px;
+  padding-top: max(24px, env(safe-area-inset-top));
+  background: radial-gradient(ellipse 100% 60% at 50% 30%, rgba(232,160,48,0.07) 0%, transparent 70%);
+  overflow-y: auto;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 40px;
+}
+.logo-mark {
+  width: 44px; height: 44px;
+  background: var(--accent);
+  border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 28px rgba(232,160,48,0.4);
+  flex-shrink: 0;
+}
+.logo-mark svg { width: 22px; height: 22px; fill: #07070d; }
+.logo-text {
+  font-family: 'Syne', sans-serif;
+  font-size: 30px; font-weight: 800;
+  letter-spacing: -0.3px;
+}
+.logo-text span { color: var(--accent); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 24px;
+  width: 100%; max-width: 400px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+}
+
+.tabs {
+  display: flex;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 3px; gap: 3px;
+  margin-bottom: 28px;
+}
+.tab-btn {
+  flex: 1; padding: 10px;
+  border-radius: 8px;
+  font-size: 14px; font-weight: 500;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+.tab-btn.active {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.field-label {
+  font-size: 11px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--muted); margin-bottom: 10px;
+}
+
+.room-code-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px;
+}
+.room-code {
+  font-family: 'Space Mono', monospace;
+  font-size: 26px; font-weight: 700;
+  color: var(--accent); letter-spacing: 5px;
+}
+.copy-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px; font-weight: 500;
+  color: var(--text);
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.copy-btn:active { background: var(--border); }
+
+.room-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'Space Mono', monospace;
+  font-size: 24px; font-weight: 700;
+  color: var(--accent);
+  text-align: center;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  transition: border-color 0.2s;
+}
+.room-input::placeholder {
+  color: var(--muted); font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400; letter-spacing: 1px;
+}
+.room-input:focus { border-color: var(--accent); }
+
+.big-btn {
+  width: 100%;
+  background: var(--accent);
+  color: #07070d;
+  font-family: 'Syne', sans-serif;
+  font-size: 16px; font-weight: 700;
+  padding: 16px;
+  border-radius: 12px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 20px rgba(232,160,48,0.3);
+  transition: all 0.15s;
+}
+.big-btn:active { transform: scale(0.98); box-shadow: 0 2px 12px rgba(232,160,48,0.2); }
+
+.hint {
+  text-align: center;
+  font-size: 13px; color: var(--muted);
+  margin-top: 16px; line-height: 1.5;
+}
+
+/* ── ROOM HEADER ─────────────────────────────────────── */
+#room {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+}
+
+#room-header {
+  height: var(--header-h);
+  min-height: var(--header-h);
+  padding: 0 16px;
+  padding-top: env(safe-area-inset-top);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+  z-index: 20;
+}
+
+.h-logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 17px; font-weight: 800;
+  white-space: nowrap; flex-shrink: 0;
+}
+.h-logo span { color: var(--accent); }
+
+.h-room {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  min-width: 0;
+}
+.h-room-id {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px; font-weight: 700;
+  color: var(--accent); letter-spacing: 2px;
+  white-space: nowrap;
+}
+.h-copy-icon { color: var(--muted); flex-shrink: 0; }
+.h-copy-icon svg { width: 12px; height: 12px; display: block; }
+
+.h-spacer { flex: 1; }
+
+/* Peer & connection dots */
+.h-status {
+  display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0;
+}
+.status-pill {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--muted);
+  white-space: nowrap;
+}
+.dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.dot.green  { background: var(--green); box-shadow: 0 0 6px rgba(74,222,128,0.7); }
+.dot.red    { background: var(--red); }
+.dot.amber  { background: var(--accent); box-shadow: 0 0 6px rgba(232,160,48,0.7); animation: blink 1.5s ease-in-out infinite; }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* Sync button in header */
+.h-sync-btn {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(232,160,48,0.25);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px; font-weight: 500;
+  color: var(--accent);
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.h-sync-btn:active { background: rgba(232,160,48,0.25); }
+.h-sync-btn svg { width: 13px; height: 13px; }
+
+/* ── MAIN AREA ───────────────────────────────────────── */
+#main-area {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  background: #000;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── FILE ZONE ───────────────────────────────────────── */
+#file-zone {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 32px 24px;
+  gap: 16px;
+  background: var(--bg);
+}
+
+.pick-btn {
+  width: 100%; max-width: 320px;
+  background: var(--surface);
+  border: 2px dashed var(--border);
+  border-radius: 20px;
+  padding: 40px 24px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pick-btn:active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.pick-icon {
+  width: 60px; height: 60px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pick-icon svg { width: 26px; height: 26px; color: var(--accent); }
+
+.pick-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px; font-weight: 700;
+  text-align: center;
+}
+.pick-sub {
+  font-size: 13px; color: var(--muted);
+  text-align: center; line-height: 1.5;
+}
+
+#file-input { display: none; }
+
+.waiting-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 10px 16px;
+  font-size: 13px; color: var(--muted);
+}
+.pulse-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+/* ── VIDEO PLAYER ────────────────────────────────────── */
+#player {
+  position: relative;
+  width: 100%; height: 100%;
+  background: #000;
+  overflow: hidden;
+  /* Controls cursor: hidden when controls hidden */
+}
+
+#video {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* ── CONTROLS OVERLAY ────────────────────────────────── */
+#ctrl-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to top,
+    rgba(0,0,0,0.90) 0%,
+    rgba(0,0,0,0.55) 55%,
+    transparent 100%);
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  transition: opacity 0.25s ease;
+  will-change: opacity;
+}
+
+#ctrl-overlay.hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── SEEK BAR ────────────────────────────────────────── */
+#seek-wrap { padding: 4px 16px 4px; }
+
+#seek-row {
+  position: relative;
+  /* 44px touch target */
+  height: 44px;
+  display: flex; align-items: center;
+  cursor: pointer;
+  touch-action: none; /* Let us handle touch ourselves */
+}
+
+#seek-track {
+  position: relative;
+  width: 100%; height: 5px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 3px;
+  transition: height 0.15s;
+  pointer-events: none;
+}
+.dragging #seek-track, #seek-row:active #seek-track { height: 7px; }
+
+#seek-buf {
+  position: absolute; left: 0; top: 0; height: 100%;
+  background: rgba(255,255,255,0.28);
+  border-radius: 3px; width: 0%;
+  pointer-events: none;
+}
+#seek-prog {
+  position: absolute; left: 0; top: 0; height: 100%;
+  background: var(--accent);
+  border-radius: 3px; width: 0%;
+  pointer-events: none;
+}
+#seek-thumb {
+  position: absolute; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px; height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  pointer-events: none;
+  left: 0%;
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+.dragging #seek-thumb { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+#seek-row:hover #seek-thumb { opacity: 1; }
+
+#seek-tip {
+  position: absolute; bottom: 50px;
+  transform: translateX(-50%);
+  background: rgba(8,8,16,0.9);
+  border: 1px solid var(--border);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  pointer-events: none;
+  opacity: 0;
+  white-space: nowrap;
+  left: 0%;
+}
+.dragging #seek-tip { opacity: 1; }
+
+/* ── BOTTOM CONTROLS BAR ─────────────────────────────── */
+#ctrl-bar {
+  display: flex; align-items: center;
+  padding: 4px 12px 8px;
+  gap: 4px;
+}
+
+/* Play button — big, center of bar */
+#play-btn {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.14);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+}
+#play-btn:active { background: rgba(255,255,255,0.22); transform: scale(0.93); }
+#play-btn svg { width: 24px; height: 24px; fill: #fff; }
+
+.time-text {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.85);
+  white-space: nowrap;
+  padding: 0 6px;
+}
+
+.ctrl-gap { flex: 1; }
+
+/* Icon buttons (mute, fullscreen) */
+.icon-btn {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.icon-btn:active { background: rgba(255,255,255,0.14); }
+.icon-btn svg { width: 20px; height: 20px; fill: #fff; }
+
+/* ── CENTER FLASH ────────────────────────────────────── */
+#flash {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 76px; height: 76px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+#flash.show { opacity: 1; }
+#flash svg { width: 36px; height: 36px; fill: #fff; }
+
+/* ── TOAST ───────────────────────────────────────────── */
+#toast {
+  position: absolute; top: 16px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(8,8,18,0.92);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 9px 16px;
+  font-size: 13px; color: var(--text);
+  display: flex; align-items: center; gap: 7px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0;
+  transition: opacity 0.25s;
+  max-width: 90%;
+}
+#toast.show { opacity: 1; }
+.toast-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+/* ── BUFFERING SPINNER ───────────────────────────────── */
+#buffer-spinner {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px; height: 44px;
+  border: 3px solid rgba(255,255,255,0.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: none;
+  pointer-events: none;
+}
+@keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+/* ── Fullscreen ──────────────────────────────────────── */
+#player:fullscreen          { width: 100vw; height: 100vh; }
+#player:-webkit-full-screen { width: 100vw; height: 100vh; }
+
+/* Landscape: make player fill full height */
+@media (orientation: landscape) {
+  #room-header {
+    /* Keep header but slightly slimmer in landscape */
+    height: 44px; min-height: 44px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════
+     LOBBY
+══════════════════════════════════ -->
+<div id="lobby">
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </div>
+    <div class="logo-text">Sync<span>Play</span></div>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('create')">Create Room</button>
+      <button class="tab-btn"        onclick="switchTab('join')">Join Room</button>
+    </div>
+
+    <!-- CREATE -->
+    <div id="tab-create" class="tab-content active">
+      <div class="field-label">Your Room Code</div>
+      <div class="room-code-box">
+        <div class="room-code" id="gen-id">——</div>
+        <button class="copy-btn" id="copy-lobby-btn" onclick="copyLobbyCode()">Copy</button>
+      </div>
+      <button class="big-btn" onclick="startHost()">Create &amp; Enter →</button>
+      <p class="hint">Share this code with your friend.</p>
+    </div>
+
+    <!-- JOIN -->
+    <div id="tab-join" class="tab-content">
+      <div class="field-label">Enter Room Code</div>
+      <input type="text" class="room-input" id="join-input"
+             maxlength="6" placeholder="ENTER CODE"
+             autocomplete="off" autocorrect="off" autocapitalize="characters"
+             oninput="this.value=this.value.toUpperCase()"/>
+      <button class="big-btn" onclick="doJoin()">Join Room →</button>
+      <p class="hint">Ask your friend for their code.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     ROOM
+══════════════════════════════════ -->
+<div id="room" class="hidden">
+
+  <!-- Header -->
+  <div id="room-header">
+    <div class="h-logo">Sync<span>Play</span></div>
+
+    <div class="h-room" onclick="copyRoomCode()" title="Tap to copy">
+      <div class="h-room-id" id="h-room-id">——</div>
+      <div class="h-copy-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="h-spacer"></div>
+
+    <div class="h-status">
+      <div class="status-pill">
+        <div class="dot amber" id="peer-dot"></div>
+        <span id="peer-lbl">Waiting…</span>
+      </div>
+      <div class="status-pill">
+        <div class="dot" id="conn-dot"></div>
+      </div>
+    </div>
+
+    <button class="h-sync-btn" onclick="requestSync()" title="Sync positions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M3 12a9 9 0 009 9 9.75 9.75 0 006.74-2.74M21 12a9 9 0 00-9-9 9.75 9.75 0 00-6.74 2.74M3 3v6h6M21 21v-6h-6"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Main -->
+  <div id="main-area">
+
+    <!-- File picker -->
+    <div id="file-zone">
+      <div class="pick-btn" onclick="document.getElementById('file-input').click()">
+        <div class="pick-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M15 10l4.553-2.069A1 1 0 0121 8.82V18a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h8"/>
+            <path d="M15 4h6m0 0v6m0-6L13 12"/>
+          </svg>
+        </div>
+        <div class="pick-title">Tap to load video</div>
+        <div class="pick-sub">MP4, MKV, MOV, WebM…</div>
+      </div>
+      <input type="file" id="file-input" accept="video/*,.mkv,.avi,.mov,.wmv,.flv"/>
+      <div class="waiting-chip" id="wait-chip" style="display:none">
+        <div class="pulse-dot"></div>
+        <span>Friend is in the room!</span>
+      </div>
+    </div>
+
+    <!-- Player -->
+    <div id="player" class="hidden">
+      <video id="video" playsinline webkit-playsinline preload="metadata"></video>
+
+      <div id="buffer-spinner"></div>
+      <div id="flash"><svg id="flash-svg" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+      <div id="toast"><div class="toast-dot"></div><span id="toast-msg"></span></div>
+
+      <!-- Controls -->
+      <div id="ctrl-overlay">
+        <div id="seek-wrap">
+          <div id="seek-row">
+            <div id="seek-track">
+              <div id="seek-buf"></div>
+              <div id="seek-prog"></div>
+            </div>
+            <div id="seek-thumb"></div>
+            <div id="seek-tip">0:00</div>
+          </div>
+        </div>
+
+        <div id="ctrl-bar">
+          <button id="play-btn">
+            <svg id="play-svg" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+
+          <span class="time-text" id="time-cur">0:00</span>
+          <span class="time-text" style="color:var(--muted)">/</span>
+          <span class="time-text" id="time-dur">0:00</span>
+
+          <div class="ctrl-gap"></div>
+
+          <button class="icon-btn" id="mute-btn">
+            <svg id="mute-svg" viewBox="0 0 24 24">
+              <path d="M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
+            </svg>
+          </button>
+
+          <button class="icon-btn" id="fs-btn">
+            <svg id="fs-svg" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+              <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+            </svg>
+          </button>
+        </div>
+      </div><!-- /ctrl-overlay -->
+    </div><!-- /player -->
+
+  </div><!-- /main-area -->
+</div><!-- /room -->
+
+<!-- ══════════════════════════════════
+     SCRIPT
+══════════════════════════════════ -->
+<script>
+'use strict';
+
+/* ── Detect iOS ──────────────────────────────────────── */
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+/* ── State ───────────────────────────────────────────── */
+let ws             = null;
+let roomId         = null;
+let mySeat         = null;   // 1 = leader (heartbeat sender), 2 = follower (corrects drift)
+let peerConnected  = false;
+let videoLoaded    = false;
+let isDragging     = false;
+let controlsOn     = false;
+let remoteDepth    = 0;      // >0 means we're applying a remote event — don't re-broadcast
+let hideTimer      = null;
+let toastTimer     = null;
+let heartbeatIv    = null;
+let lastSeekSend   = 0;
+
+/* ── DOM ─────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const video    = $('video');
+const player   = $('player');
+const ctrlOvl  = $('ctrl-overlay');
+const seekRow  = $('seek-row');
+const seekProg = $('seek-prog');
+const seekBuf  = $('seek-buf');
+const seekThumb= $('seek-thumb');
+const seekTip  = $('seek-tip');
+const playBtn  = $('play-btn');
+const playSvg  = $('play-svg');
+const muteBtn  = $('mute-btn');
+const muteSvg  = $('mute-svg');
+const fsBtn    = $('fs-btn');
+const fsSvg    = $('fs-svg');
+const timeCur  = $('time-cur');
+const timeDur  = $('time-dur');
+const flash    = $('flash');
+const flashSvg = $('flash-svg');
+const toast    = $('toast');
+const toastMsg = $('toast-msg');
+const spinner  = $('buffer-spinner');
+const peerDot  = $('peer-dot');
+const peerLbl  = $('peer-lbl');
+const connDot  = $('conn-dot');
+
+/* ── Room ID gen ─────────────────────────────────────── */
+const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const genId = () => Array.from({length:6}, () => CHARS[Math.random()*CHARS.length|0]).join('');
+const lobbyId = genId();
+$('gen-id').textContent = lobbyId;
+
+/* ── Tabs ────────────────────────────────────────────── */
+function switchTab(t) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) =>
+    b.classList.toggle('active', i === (t==='create'?0:1)));
+  $('tab-create').classList.toggle('active', t==='create');
+  $('tab-join').classList.toggle('active', t==='join');
+}
+
+/* ── Copy helpers ────────────────────────────────────── */
+function copyText(txt) { navigator.clipboard.writeText(txt).catch(()=>{}); }
+function copyLobbyCode() {
+  copyText(lobbyId);
+  const b = $('copy-lobby-btn');
+  b.textContent = '✓ Copied';
+  setTimeout(() => b.textContent = 'Copy', 1600);
+}
+function copyRoomCode() {
+  copyText(roomId);
+  showToast('Room code copied!');
+}
+
+/* ── Enter room ──────────────────────────────────────── */
+function startHost() { enterRoom(lobbyId); }
+function doJoin() {
+  const id = $('join-input').value.trim().toUpperCase();
+  if (id.length < 4) { alert('Enter a valid room code.'); return; }
+  enterRoom(id);
+}
+function enterRoom(id) {
+  roomId = id;
+  $('h-room-id').textContent = id;
+  $('lobby').classList.add('hidden');
+  $('room').classList.remove('hidden');
+  connectWS();
+}
+
+/* ── WebSocket ───────────────────────────────────────── */
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}`);
+
+  ws.onopen = () => {
+    setConn(true);
+    ws.send(JSON.stringify({ type:'join', roomId }));
+  };
+  ws.onclose = () => { setConn(false); setTimeout(connectWS, 3000); };
+  ws.onerror = () => setConn(false);
+  ws.onmessage = e => {
+    let m; try { m = JSON.parse(e.data); } catch { return; }
+    onMsg(m);
+  };
+}
+function send(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+}
+
+/* ── Message handler ─────────────────────────────────── */
+function onMsg(m) {
+  switch (m.type) {
+
+    case 'joined':
+      mySeat = m.seat;
+      break;
+
+    case 'peer_joined':
+      setPeer(true);
+      // If we have video loaded, tell the new peer our current state
+      if (videoLoaded) {
+        send({ type:'sync_state', time: video.currentTime, paused: video.paused });
+      }
+      break;
+
+    case 'peer_left':
+      setPeer(false);
+      break;
+
+    case 'user_count':
+      setPeer(m.count >= 2);
+      break;
+
+    case 'play':
+      remote(() => {
+        video.currentTime = m.time;
+        video.play().catch(()=>{});
+        showToast('▶ Friend pressed play');
+      });
+      break;
+
+    case 'pause':
+      remote(() => {
+        video.currentTime = m.time;
+        video.pause();
+        showToast('⏸ Friend paused');
+      });
+      break;
+
+    case 'seek':
+      remote(() => {
+        video.currentTime = m.time;
+        showToast(`⏩ Jumped to ${fmt(m.time)}`);
+      });
+      break;
+
+    // Leader → Follower heartbeat for continuous drift correction
+    case 'heartbeat':
+      if (mySeat === 1 || !videoLoaded) break;
+      // Estimate where leader actually is now (+80ms for typical latency)
+      const leaderNow = m.time + 0.08;
+      // Sync play/pause state if mismatched
+      if (m.paused !== video.paused) {
+        remote(() => {
+          video.currentTime = leaderNow;
+          m.paused ? video.pause() : video.play().catch(()=>{});
+        });
+        break;
+      }
+      // Correct drift while both are playing
+      if (!video.paused) {
+        const drift = leaderNow - video.currentTime;
+        const absDrift = Math.abs(drift);
+        if (absDrift > 0.5) {
+          remote(() => { video.currentTime = leaderNow; });
+          // Only show toast for noticeable correction
+          if (absDrift > 1.5) showToast(`⟳ Synced (${drift>0?'+':''}${drift.toFixed(1)}s)`);
+        }
+      }
+      break;
+
+    // Peer is sharing state (e.g. after we joined or requested sync)
+    case 'sync_state':
+      if (!videoLoaded) break;
+      remote(() => {
+        video.currentTime = m.time + 0.08;
+        m.paused ? video.pause() : video.play().catch(()=>{});
+        showToast(`⟳ Synced to ${fmt(m.time)}`);
+      });
+      break;
+
+    case 'sync_request':
+      if (videoLoaded) {
+        send({ type:'sync_state', time: video.currentTime, paused: video.paused });
+      }
+      break;
+  }
+}
+
+/* Run fn while suppressing broadcast feedback */
+function remote(fn) {
+  remoteDepth++;
+  fn();
+  setTimeout(() => remoteDepth--, 350);
+}
+
+function requestSync() {
+  if (!videoLoaded) { showToast('Load your video first'); return; }
+  send({ type:'sync_request' });
+  showToast('Requesting sync…');
+}
+
+/* ── Heartbeat (leader only, seat 1) ─────────────────── */
+function startHeartbeat() {
+  stopHeartbeat();
+  if (mySeat !== 1) return;
+  heartbeatIv = setInterval(() => {
+    if (!videoLoaded || !peerConnected) return;
+    send({ type:'heartbeat', time: video.currentTime, paused: video.paused });
+  }, 2000);
+}
+function stopHeartbeat() {
+  clearInterval(heartbeatIv); heartbeatIv = null;
+}
+
+/* ── Status UI ───────────────────────────────────────── */
+function setConn(ok) {
+  connDot.className = 'dot ' + (ok ? 'green' : 'red');
+}
+function setPeer(connected) {
+  peerConnected = connected;
+  if (connected) {
+    peerDot.className = 'dot green';
+    peerLbl.textContent = 'Connected';
+    startHeartbeat();
+  } else {
+    peerDot.className = 'dot amber';
+    peerLbl.textContent = 'Waiting…';
+    stopHeartbeat();
+  }
+  // Show waiting chip if peer joined but no video yet
+  $('wait-chip').style.display = (connected && !videoLoaded) ? 'flex' : 'none';
+}
+
+/* ── File loading ────────────────────────────────────── */
+$('file-input').addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+
+function loadFile(file) {
+  video.src = URL.createObjectURL(file);
+  videoLoaded = true;
+  $('file-zone').classList.add('hidden');
+  player.classList.remove('hidden');
+  showControls();
+  // Tell peer we're ready / share state
+  if (peerConnected) {
+    send({ type:'sync_state', time: 0, paused: true });
+  }
+  startHeartbeat();
+}
+
+/* ── Video → broadcast ───────────────────────────────── */
+video.addEventListener('play', () => {
+  updatePlayIcon(false);
+  if (remoteDepth > 0) return;
+  send({ type:'play', time: video.currentTime });
+});
+video.addEventListener('pause', () => {
+  updatePlayIcon(true);
+  if (remoteDepth > 0) return;
+  send({ type:'pause', time: video.currentTime });
+});
+video.addEventListener('seeked', () => {
+  updateSeekUI();
+  if (remoteDepth > 0) return;
+  const now = Date.now();
+  if (now - lastSeekSend < 100) return;
+  lastSeekSend = now;
+  send({ type:'seek', time: video.currentTime });
+});
+video.addEventListener('timeupdate', updateSeekUI);
+video.addEventListener('progress', updateBuf);
+video.addEventListener('loadedmetadata', () => { timeDur.textContent = fmt(video.duration); });
+video.addEventListener('ended', () => updatePlayIcon(true));
+video.addEventListener('waiting', () => { spinner.style.display = 'block'; });
+video.addEventListener('canplay', () => { spinner.style.display = 'none'; });
+video.addEventListener('playing', () => { spinner.style.display = 'none'; });
+
+function updatePlayIcon(paused) {
+  playSvg.innerHTML = paused
+    ? '<path d="M8 5v14l11-7z"/>'
+    : '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+}
+
+/* ── Play / Pause ────────────────────────────────────── */
+playBtn.addEventListener('click', e => { e.stopPropagation(); togglePlay(); });
+
+function togglePlay() {
+  if (video.paused) {
+    video.play().catch(()=>{});
+    doFlash(false);
+  } else {
+    video.pause();
+    doFlash(true);
+  }
+}
+
+function doFlash(paused) {
+  flashSvg.innerHTML = paused
+    ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'
+    : '<path d="M8 5v14l11-7z"/>';
+  flash.classList.add('show');
+  setTimeout(() => flash.classList.remove('show'), 500);
+}
+
+/* ── Tap on video area → toggle controls ─────────────── */
+let lastTap = 0;
+player.addEventListener('click', e => {
+  if (ctrlOvl.contains(e.target) && e.target !== ctrlOvl) return;
+  // Double-tap detection → fullscreen
+  const now = Date.now();
+  if (now - lastTap < 300) {
+    toggleFullscreen(); lastTap = 0; return;
+  }
+  lastTap = now;
+  controlsOn ? resetHideTimer() : showControls();
+});
+
+/* ── Seek Bar — Mouse ────────────────────────────────── */
+seekRow.addEventListener('mousedown', e => {
+  isDragging = true; seekRow.classList.add('dragging');
+  applySeek(e.clientX); showControls();
+});
+document.addEventListener('mousemove', e => { if (isDragging) applySeek(e.clientX); });
+document.addEventListener('mouseup', e => {
+  if (!isDragging) return;
+  isDragging = false; seekRow.classList.remove('dragging');
+  const t = clientXToTime(e.clientX);
+  if (isFinite(t)) video.currentTime = t;
+});
+seekRow.addEventListener('mousemove', e => {
+  if (!video.duration) return;
+  const x = clampX(e.clientX);
+  seekTip.style.left = x + 'px';
+  seekTip.textContent = fmt(clientXToTime(e.clientX));
+});
+
+/* ── Seek Bar — Touch ────────────────────────────────── */
+seekRow.addEventListener('touchstart', e => {
+  e.preventDefault();
+  isDragging = true; seekRow.classList.add('dragging');
+  applySeek(e.touches[0].clientX); showControls();
+}, { passive: false });
+
+seekRow.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!isDragging) return;
+  applySeek(e.touches[0].clientX);
+  const x = clampX(e.touches[0].clientX);
+  seekTip.style.left = x + 'px';
+  seekTip.textContent = fmt(clientXToTime(e.touches[0].clientX));
+}, { passive: false });
+
+seekRow.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (!isDragging) return;
+  isDragging = false; seekRow.classList.remove('dragging');
+  const t = clientXToTime(e.changedTouches[0].clientX);
+  if (isFinite(t)) video.currentTime = t;
+}, { passive: false });
+
+function clientXToTime(clientX) {
+  const r = seekRow.getBoundingClientRect();
+  const x = Math.max(0, Math.min(clientX - r.left, r.width));
+  return (x / r.width) * (video.duration || 0);
+}
+function clampX(clientX) {
+  const r = seekRow.getBoundingClientRect();
+  return Math.max(0, Math.min(clientX - r.left, r.width));
+}
+function applySeek(clientX) {
+  const t = clientXToTime(clientX);
+  const pct = video.duration ? (t / video.duration * 100) : 0;
+  seekProg.style.width  = pct + '%';
+  seekThumb.style.left  = pct + '%';
+  const x = clampX(clientX);
+  seekTip.style.left    = x + 'px';
+  seekTip.textContent   = fmt(t);
+}
+
+function updateSeekUI() {
+  if (!video.duration || isDragging) return;
+  const pct = video.currentTime / video.duration * 100;
+  seekProg.style.width  = pct + '%';
+  seekThumb.style.left  = pct + '%';
+  timeCur.textContent   = fmt(video.currentTime);
+}
+function updateBuf() {
+  if (!video.duration || !video.buffered.length) return;
+  seekBuf.style.width = (video.buffered.end(video.buffered.length-1) / video.duration * 100) + '%';
+}
+
+/* ── Mute ────────────────────────────────────────────── */
+muteBtn.addEventListener('click', e => { e.stopPropagation(); toggleMute(); });
+function toggleMute() {
+  video.muted = !video.muted;
+  muteSvg.innerHTML = video.muted
+    ? '<path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/>'
+    : '<path d="M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>';
+}
+
+/* ── Fullscreen ──────────────────────────────────────── */
+fsBtn.addEventListener('click', e => { e.stopPropagation(); toggleFullscreen(); });
+
+function toggleFullscreen() {
+  if (isIOS) {
+    // iOS Safari: only native video fullscreen works
+    if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+    return;
+  }
+  const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if (!inFs) {
+    const req = player.requestFullscreen || player.webkitRequestFullscreen;
+    if (req) req.call(player).catch(()=>{});
+  } else {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) exit.call(document).catch(()=>{});
+  }
+}
+
+function onFsChange() {
+  const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  fsSvg.innerHTML = inFs
+    ? '<path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3" stroke="#fff" stroke-width="2" fill="none"/>'
+    : '<path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" stroke="#fff" stroke-width="2" fill="none"/>';
+}
+document.addEventListener('fullscreenchange', onFsChange);
+document.addEventListener('webkitfullscreenchange', onFsChange);
+
+/* ── Controls show / hide ────────────────────────────── */
+function showControls() {
+  controlsOn = true;
+  ctrlOvl.classList.remove('hide');
+  resetHideTimer();
+}
+function hideControls() {
+  controlsOn = false;
+  ctrlOvl.classList.add('hide');
+}
+function resetHideTimer() {
+  clearTimeout(hideTimer);
+  // Keep controls visible while paused or dragging
+  if (!video.paused && !isDragging) {
+    hideTimer = setTimeout(hideControls, 3500);
+  }
+}
+// Pause always shows controls
+video.addEventListener('pause', showControls);
+// Any touch/move on player resets timer
+player.addEventListener('touchstart', () => { if (!isDragging) showControls(); }, { passive: true });
+
+/* ── Keyboard shortcuts (desktop) ───────────────────── */
+document.addEventListener('keydown', e => {
+  if (!videoLoaded) return;
+  if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+  switch (e.code) {
+    case 'Space': case 'KeyK': e.preventDefault(); togglePlay(); showControls(); break;
+    case 'KeyF':  toggleFullscreen(); break;
+    case 'KeyM':  toggleMute(); break;
+    case 'ArrowRight': e.preventDefault(); video.currentTime = Math.min(video.duration, video.currentTime+5); showControls(); break;
+    case 'ArrowLeft':  e.preventDefault(); video.currentTime = Math.max(0, video.currentTime-5); showControls(); break;
+  }
+});
+
+/* ── Toast ───────────────────────────────────────────── */
+function showToast(msg) {
+  toastMsg.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+/* ── Format time ─────────────────────────────────────── */
+function fmt(s) {
+  if (!isFinite(s) || isNaN(s)) return '0:00';
+  s = Math.floor(s);
+  const h = s/3600|0, m = (s%3600)/60|0, sec = s%60;
+  return h > 0
+    ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+    : `${m}:${String(sec).padStart(2,'0')}`;
+}
+</script>
+</body>
+</html>
