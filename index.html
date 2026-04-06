@@ -358,13 +358,32 @@ input {
   width: 100%; height: 100%;
   background: #000;
   overflow: hidden;
-  /* Controls cursor: hidden when controls hidden */
 }
 
 #video {
   width: 100%; height: 100%;
   object-fit: contain;
   display: block;
+}
+
+/* ── FULLSCREEN: player fills screen, controls stay inside ── */
+/* Standard */
+#player:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #000;
+}
+/* WebKit (older Safari / Samsung Internet) */
+#player:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #000;
+}
+/* Firefox */
+#player:-moz-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #000;
 }
 
 /* ── CONTROLS OVERLAY ────────────────────────────────── */
@@ -389,11 +408,10 @@ input {
 
 #seek-row {
   position: relative;
-  /* 44px touch target */
   height: 44px;
   display: flex; align-items: center;
   cursor: pointer;
-  touch-action: none; /* Let us handle touch ourselves */
+  touch-action: none;
 }
 
 #seek-track {
@@ -457,7 +475,6 @@ input {
   gap: 4px;
 }
 
-/* Play button — big, center of bar */
 #play-btn {
   width: 52px; height: 52px;
   border-radius: 50%;
@@ -479,7 +496,6 @@ input {
 
 .ctrl-gap { flex: 1; }
 
-/* Icon buttons (mute, fullscreen) */
 .icon-btn {
   width: 44px; height: 44px;
   border-radius: 10px;
@@ -542,7 +558,7 @@ input {
 /* ── YouTube-style skip ripple ───────────────────────── */
 .skip-ripple {
   position: absolute; top: 0; bottom: 0;
-  width: 40%;           /* covers left/right third-ish */
+  width: 40%;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 6px;
@@ -554,16 +570,15 @@ input {
 .skip-left  { left: 0; }
 .skip-right { right: 0; }
 
-/* Circular arc background */
 .skip-arc {
   position: absolute; inset: 0;
-  border-radius: 0 100% 100% 0 / 0 50% 50% 0; /* right half-circle */
+  border-radius: 0 100% 100% 0 / 0 50% 50% 0;
   background: rgba(255,255,255,0.12);
   transform: scaleX(0); transform-origin: left center;
   transition: transform 0.18s ease-out;
 }
 .skip-left .skip-arc {
-  border-radius: 100% 0 0 100% / 50% 0 0 50%; /* left half-circle */
+  border-radius: 100% 0 0 100% / 50% 0 0 50%;
   transform-origin: right center;
 }
 .skip-ripple.show .skip-arc { transform: scaleX(1); }
@@ -582,14 +597,9 @@ input {
   filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
 }
 
-/* ── Fullscreen ──────────────────────────────────────── */
-#player:fullscreen          { width: 100vw; height: 100vh; }
-#player:-webkit-full-screen { width: 100vw; height: 100vh; }
-
-/* Landscape: make player fill full height */
+/* Landscape: slightly slimmer header */
 @media (orientation: landscape) {
   #room-header {
-    /* Keep header but slightly slimmer in landscape */
     height: 44px; min-height: 44px;
   }
 }
@@ -703,7 +713,6 @@ input {
       <video id="video" playsinline webkit-playsinline preload="metadata"></video>
 
       <div id="buffer-spinner"></div>
-      <!-- YouTube-style double-tap skip ripples -->
       <div id="skip-back"  class="skip-ripple skip-left">
         <div class="skip-arc"></div>
         <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
@@ -714,7 +723,6 @@ input {
         <svg viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
         <span class="skip-label">10s</span>
       </div>
-      <!-- Centre flash (play/pause) -->
       <div id="flash"><svg id="flash-svg" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
       <div id="toast"><div class="toast-dot"></div><span id="toast-msg"></span></div>
 
@@ -767,18 +775,17 @@ input {
 'use strict';
 
 /* ── Platform detection ──────────────────────────────── */
-// iPhones need video.webkitEnterFullscreen — tablets (iPad, Android) support requestFullscreen fine
 const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
 
 /* ── State ───────────────────────────────────────────── */
 let ws             = null;
 let roomId         = null;
-let mySeat         = null;   // 1 = leader (heartbeat sender), 2 = follower (corrects drift)
+let mySeat         = null;
 let peerConnected  = false;
 let videoLoaded    = false;
 let isDragging     = false;
 let controlsOn     = false;
-let remoteDepth    = 0;      // >0 means we're applying a remote event — don't re-broadcast
+let remoteDepth    = 0;
 let hideTimer      = null;
 let toastTimer     = null;
 let heartbeatIv    = null;
@@ -883,7 +890,6 @@ function onMsg(m) {
 
     case 'peer_joined':
       setPeer(true);
-      // If we have video loaded, tell the new peer our current state
       if (videoLoaded) {
         send({ type:'sync_state', time: video.currentTime, paused: video.paused });
       }
@@ -920,12 +926,9 @@ function onMsg(m) {
       });
       break;
 
-    // Leader → Follower heartbeat for continuous drift correction
     case 'heartbeat':
       if (mySeat === 1 || !videoLoaded) break;
-      // Estimate where leader actually is now (+80ms for typical latency)
       const leaderNow = m.time + 0.08;
-      // Sync play/pause state if mismatched
       if (m.paused !== video.paused) {
         remote(() => {
           video.currentTime = leaderNow;
@@ -933,19 +936,16 @@ function onMsg(m) {
         });
         break;
       }
-      // Correct drift while both are playing
       if (!video.paused) {
         const drift = leaderNow - video.currentTime;
         const absDrift = Math.abs(drift);
         if (absDrift > 0.5) {
           remote(() => { video.currentTime = leaderNow; });
-          // Only show toast for noticeable correction
           if (absDrift > 1.5) showToast(`⟳ Synced (${drift>0?'+':''}${drift.toFixed(1)}s)`);
         }
       }
       break;
 
-    // Peer is sharing state (e.g. after we joined or requested sync)
     case 'sync_state':
       if (!videoLoaded) break;
       remote(() => {
@@ -963,7 +963,6 @@ function onMsg(m) {
   }
 }
 
-/* Run fn while suppressing broadcast feedback */
 function remote(fn) {
   remoteDepth++;
   fn();
@@ -976,7 +975,7 @@ function requestSync() {
   showToast('Requesting sync…');
 }
 
-/* ── Heartbeat (leader only, seat 1) ─────────────────── */
+/* ── Heartbeat ───────────────────────────────────────── */
 function startHeartbeat() {
   stopHeartbeat();
   if (mySeat !== 1) return;
@@ -1004,7 +1003,6 @@ function setPeer(connected) {
     peerLbl.textContent = 'Waiting…';
     stopHeartbeat();
   }
-  // Show waiting chip if peer joined but no video yet
   $('wait-chip').style.display = (connected && !videoLoaded) ? 'flex' : 'none';
 }
 
@@ -1019,7 +1017,6 @@ function loadFile(file) {
   $('file-zone').classList.add('hidden');
   player.classList.remove('hidden');
   showControls();
-  // Tell peer we're ready / share state
   if (peerConnected) {
     send({ type:'sync_state', time: 0, paused: true });
   }
@@ -1080,23 +1077,16 @@ function doFlash(paused) {
   setTimeout(() => flash.classList.remove('show'), 500);
 }
 
-/* ── YouTube-style tap / double-tap ──────────────────────
-   Single tap  → show controls (or hide if already visible)
-   Double-tap left 35%  → back 10s
-   Double-tap right 35% → forward 10s
-   Double-tap center    → play/pause
-   Controls bar taps are handled by their own buttons.
-──────────────────────────────────────────────────────── */
+/* ── YouTube-style tap / double-tap ─────────────────── */
 const skipBackEl = $('skip-back');
 const skipFwdEl  = $('skip-fwd');
 
-let tapTimer  = null;   // pending single-tap timer
+let tapTimer  = null;
 let tapCount  = 0;
-let tapZone   = '';     // 'left' | 'right' | 'center'
+let tapZone   = '';
 let skipFlashTimer = { back: null, fwd: null };
 
 player.addEventListener('touchend', e => {
-  // Ignore touches that originate from the controls overlay
   if (ctrlOvl.contains(e.target)) return;
 
   const touch = e.changedTouches[0];
@@ -1109,12 +1099,10 @@ player.addEventListener('touchend', e => {
   if (tapCount === 1) {
     tapZone = zone;
     tapTimer = setTimeout(() => {
-      // ── Single tap ──
       tapCount = 0;
       controlsOn ? (video.paused ? null : resetHideTimer()) : showControls();
     }, 250);
   } else if (tapCount === 2 && zone === tapZone) {
-    // ── Double tap ──
     clearTimeout(tapTimer);
     tapCount = 0;
     if (zone === 'left') {
@@ -1126,12 +1114,10 @@ player.addEventListener('touchend', e => {
       send({ type:'seek', time: video.currentTime });
       flashSkip('fwd');
     } else {
-      // center double-tap → play/pause
       togglePlay();
     }
     showControls();
   } else {
-    // Zone changed between taps — treat as new single tap
     clearTimeout(tapTimer);
     tapCount = 1;
     tapZone  = zone;
@@ -1233,66 +1219,44 @@ function toggleMute() {
 }
 
 /* ── Fullscreen ──────────────────────────────────────── */
+/*
+ * FIX: We fullscreen #player (the container div) instead of <video>.
+ * This means both the video AND the controls overlay are inside the
+ * fullscreen element — no position:fixed hacks needed, and it works
+ * consistently across phones AND tablets on Android Brave/Chrome.
+ *
+ * iPhone Safari still doesn't support requestFullscreen on divs, so
+ * we fall back to video.webkitEnterFullscreen there only.
+ */
 fsBtn.addEventListener('click', e => { e.stopPropagation(); toggleFullscreen(); });
 
-let fakeFs = false; // true when using CSS fake-fullscreen
-
 function toggleFullscreen() {
-  const inRealFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
 
-  if (fakeFs) {
-    exitFakeFs(); return;
-  }
-  if (inRealFs) {
-    (document.exitFullscreen || document.webkitExitFullscreen).call(document).catch(()=>{});
+  if (inFs) {
+    const exitFn = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exitFn) exitFn.call(document).catch(()=>{});
     return;
   }
 
-  // Try real fullscreen — video element first (works on Brave phone, Chrome, Safari)
-  const fsPromise = video.requestFullscreen
-    ? video.requestFullscreen()
-    : video.webkitRequestFullscreen
-      ? (video.webkitRequestFullscreen(), Promise.resolve())
-      : video.webkitEnterFullscreen
-        ? (video.webkitEnterFullscreen(), Promise.resolve())
-        : Promise.reject();
-
-  fsPromise.catch(() => {
-    // Real API blocked (e.g. Brave on Android tablet) — use CSS fake fullscreen
-    enterFakeFs();
-  });
-}
-
-function enterFakeFs() {
-  fakeFs = true;
-  player.style.cssText = 'position:fixed;inset:0;z-index:9999;width:100vw;height:100vh;background:#000;';
-  // Lock to landscape if possible
-  if (screen.orientation && screen.orientation.lock) {
-    screen.orientation.lock('landscape').catch(()=>{});
+  if (isIPhone) {
+    // iPhone Safari: only <video>.webkitEnterFullscreen works
+    if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+    return;
   }
-  updateFsIcon(true);
-  showControls();
-}
 
-function exitFakeFs() {
-  fakeFs = false;
-  player.style.cssText = '';
-  if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
-  updateFsIcon(false);
+  // All other devices (Android phones, Android tablets, desktop):
+  // fullscreen the #player div so controls stay inside it.
+  if (player.requestFullscreen) {
+    player.requestFullscreen().catch(()=>{});
+  } else if (player.webkitRequestFullscreen) {
+    player.webkitRequestFullscreen();
+  }
 }
 
 function onFsChange() {
-  const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
-  const inFs  = !!fsEl;
-
-  if (inFs && fsEl === video) {
-    // Video element went fullscreen — overlay the player div on top so controls show
-    player.style.cssText = 'position:fixed;inset:0;z-index:9999;width:100vw;height:100vh;background:#000;';
-  } else if (!inFs && !fakeFs) {
-    player.style.cssText = '';
-  }
-
-  updateFsIcon(inFs || fakeFs);
+  const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  updateFsIcon(inFs);
 }
 
 function updateFsIcon(active) {
@@ -1310,7 +1274,6 @@ function showControls() {
   resetHideTimer();
 }
 function hideControls() {
-  // Never hide while paused or dragging the seek bar
   if (video.paused || isDragging) return;
   controlsOn = false;
   ctrlOvl.classList.add('hide');
@@ -1321,15 +1284,11 @@ function resetHideTimer() {
     hideTimer = setTimeout(hideControls, 3500);
   }
 }
-// Always show controls when paused
 video.addEventListener('pause', showControls);
-// When playback resumes, start the auto-hide countdown
 video.addEventListener('play', () => { if (controlsOn) resetHideTimer(); });
-// Touching the seek bar or control bar resets the timer — but DON'T call showControls
-// (which would make controls reappear during seek when they were already hidden)
 ctrlOvl.addEventListener('touchstart', () => resetHideTimer(), { passive: true });
 
-/* ── Keyboard shortcuts (desktop) ───────────────────── */
+/* ── Keyboard shortcuts ──────────────────────────────── */
 document.addEventListener('keydown', e => {
   if (!videoLoaded) return;
   if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
