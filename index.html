@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>R-Play</title>
+<title>R Sync</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
@@ -135,7 +136,24 @@ input{font-family:inherit;outline:none;-webkit-user-select:text;user-select:text
 #cc-btn.active{background:var(--accent-dim)}
 
 /* ── SUBTITLE SETTINGS PANEL ── */
-#sub-panel{position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:20px 20px max(20px,env(safe-area-inset-bottom));z-index:100;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);touch-action:pan-y}
+#sub-panel {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px max(20px, env(safe-area-inset-bottom));
+  /* High z-index — must sit above ctrl-overlay and video in both normal and fullscreen */
+  z-index: 999;
+  transform: translateY(100%);
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  /* Don't interfere with touch scrolling inside panel */
+  touch-action: pan-y;
+  /* Ensure it's interactive even when ctrl-overlay is pointer-events:none */
+  pointer-events: all;
+  overflow-y: auto;
+  max-height: 85%;
+}
 #sub-panel.open{transform:translateY(0)}
 .panel-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px}
 .panel-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text)}
@@ -145,13 +163,89 @@ input{font-family:inherit;outline:none;-webkit-user-select:text;user-select:text
 .chip{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:500;background:var(--surface2);border:1px solid var(--border);color:var(--muted);transition:all .15s;cursor:pointer}
 .chip:active,.chip.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
 
-/* Offset controls */
-.offset-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
-.off-btn{width:38px;height:38px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
-.off-btn:active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
-.off-display{flex:1;text-align:center;font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--accent)}
-.panel-close{width:100%;padding:12px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;font-weight:500;margin-top:4px}
-.panel-close:active{background:var(--border)}
+/* ── Offset controls ── */
+.panel-section {
+  margin-bottom: 16px;
+}
+.offset-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  align-items: center;
+}
+.off-btn {
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  transition: all .15s;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.off-btn:active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.off-val-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.off-display {
+  font-family: 'Space Mono', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: center;
+  cursor: pointer;
+  padding: 8px 2px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent-dim);
+  width: 100%;
+  transition: background .15s;
+}
+.off-display:active { background: rgba(139,92,246,.3); }
+#off-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 7px 4px;
+  font-family: 'Space Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: center;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.off-hint {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 8px;
+}
+.panel-close {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #07070d;
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 4px;
+  transition: all .15s;
+}
+.panel-close:active { opacity: .85; }
 
 /* ── MISC ── */
 #buffer-spinner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:none;pointer-events:none}
@@ -180,7 +274,7 @@ video::cue{background:rgba(0,0,0,.55);color:#fff;font-family:'DM Sans',sans-seri
 <div id="lobby">
   <div class="logo">
     <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
-    <div class="logo-text">R-<span>Play</span></div>
+    <div class="logo-text">R <span>Sync</span></div>
   </div>
   <div class="card">
     <div class="tabs">
@@ -210,7 +304,7 @@ video::cue{background:rgba(0,0,0,.55);color:#fff;font-family:'DM Sans',sans-seri
 <!-- ROOM -->
 <div id="room" class="hidden">
   <div id="room-header">
-    <div class="h-logo">R-<span>Play</span></div>
+    <div class="h-logo">R <span>Sync</span></div>
     <div class="h-room" onclick="copyRoomCode()">
       <div class="h-room-id" id="h-room-id">——</div>
       <div class="h-copy-icon">
@@ -337,15 +431,27 @@ video::cue{background:rgba(0,0,0,.55);color:#fff;font-family:'DM Sans',sans-seri
           </div>
         </div>
 
-        <div class="panel-row" id="offset-row" style="display:none">
-          <span class="panel-label">Offset</span>
-          <div class="offset-row" style="flex:1">
-            <button class="off-btn" onclick="adjustOffset(-5)">-5s</button>
-            <button class="off-btn" onclick="adjustOffset(-1)">-1s</button>
-            <div class="off-display" id="off-display">0.0s</div>
+        <div class="panel-section" id="offset-row" style="display:none">
+          <div class="panel-title" style="font-size:13px;margin-bottom:12px;color:var(--muted)">Subtitle Offset</div>
+          <div class="offset-grid">
+            <button class="off-btn" onclick="adjustOffset(-5)">−5s</button>
+            <button class="off-btn" onclick="adjustOffset(-1)">−1s</button>
+            <button class="off-btn" onclick="adjustOffset(-0.5)">−0.5s</button>
+            <!-- Tap the value to type a custom offset -->
+            <div class="off-val-wrap" id="off-val-wrap">
+              <div class="off-display" id="off-display" onclick="startOffsetEdit()" title="Tap to enter custom value">0.0s</div>
+              <input
+                type="number" id="off-input" step="0.1" placeholder="e.g. −2.5"
+                style="display:none"
+                onblur="finishOffsetEdit()"
+                onkeydown="if(event.key==='Enter'||event.key==='Done'){this.blur()}"
+              />
+            </div>
+            <button class="off-btn" onclick="adjustOffset(0.5)">+0.5s</button>
             <button class="off-btn" onclick="adjustOffset(1)">+1s</button>
             <button class="off-btn" onclick="adjustOffset(5)">+5s</button>
           </div>
+          <div class="off-hint">Tap the value to type a custom offset</div>
         </div>
 
         <button class="panel-close" onclick="closeSubPanel()">Done</button>
@@ -389,7 +495,7 @@ const flash=$('flash'),flashSvg=$('flash-svg');
 const toast=$('toast'),toastMsg=$('toast-msg');
 const spinner=$('buffer-spinner');
 const peerDot=$('peer-dot'),peerLbl=$('peer-lbl'),connDot=$('conn-dot');
-const ccBtn=$('cc-btn'),subInput=$('sub-input'),subPanel=$('sub-panel'),offDisplay=$('off-display');
+const ccBtn = $('cc-btn'), subInput = $('sub-input'), subPanel = $('sub-panel');
 const skipBackEl=$('skip-back'),skipFwdEl=$('skip-fwd');
 
 /* ── Room ID gen ── */
@@ -492,9 +598,9 @@ function onMsg(m){
       break;
 
     case 'subtitle_offset':
-      subOffset=m.offset;
-      offDisplay.textContent=(subOffset>=0?'+':'')+subOffset.toFixed(1)+'s';
-      if(currentVtt) reloadTrack(shiftVtt(currentVtt,subOffset));
+      subOffset = m.offset;
+      updateOffsetDisplay();
+      if (currentVtt) reloadTrack(shiftVtt(currentVtt, subOffset));
       break;
   }
 }
@@ -583,28 +689,45 @@ function doFlash(p){
 }
 
 /* ── Tap handler ── */
-player.addEventListener('touchend',e=>{
-  if(ctrlOvl.contains(e.target))return;
-  if(subPanel.classList.contains('open')){closeSubPanel();return}
-  const touch=e.changedTouches[0];
-  const rect=player.getBoundingClientRect();
-  const xPct=(touch.clientX-rect.left)/rect.width;
-  const zone=xPct<0.35?'left':xPct>0.65?'right':'center';
+player.addEventListener('touchend', e => {
+  // Let control buttons and seek bar handle themselves
+  if (ctrlOvl.contains(e.target)) return;
+  // Let touches inside the subtitle panel pass through to buttons
+  if (subPanel.contains(e.target)) return;
+  // Tapping outside the panel while it's open → close it
+  if (subPanel.classList.contains('open')) { closeSubPanel(); return; }
+
+  const touch = e.changedTouches[0];
+  const rect  = player.getBoundingClientRect();
+  const xPct  = (touch.clientX - rect.left) / rect.width;
+  const zone  = xPct < 0.35 ? 'left' : xPct > 0.65 ? 'right' : 'center';
+
   tapCount++;
-  if(tapCount===1){
-    tapZone=zone;
-    tapTimer=setTimeout(()=>{tapCount=0;controlsOn?hideControls():showControls()},250);
-  } else if(tapCount===2&&zone===tapZone){
-    clearTimeout(tapTimer);tapCount=0;
-    if(zone==='left'){video.currentTime=Math.max(0,video.currentTime-10);send({type:'seek',time:video.currentTime});flashSkip('back')}
-    else if(zone==='right'){video.currentTime=Math.min(video.duration||Infinity,video.currentTime+10);send({type:'seek',time:video.currentTime});flashSkip('fwd')}
-    else{togglePlay()}
+  if (tapCount === 1) {
+    tapZone = zone;
+    tapTimer = setTimeout(() => {
+      tapCount = 0;
+      controlsOn ? hideControls() : showControls();
+    }, 250);
+  } else if (tapCount === 2 && zone === tapZone) {
+    clearTimeout(tapTimer); tapCount = 0;
+    if (zone === 'left') {
+      video.currentTime = Math.max(0, video.currentTime - 10);
+      send({ type: 'seek', time: video.currentTime });
+      flashSkip('back');
+    } else if (zone === 'right') {
+      video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 10);
+      send({ type: 'seek', time: video.currentTime });
+      flashSkip('fwd');
+    } else {
+      togglePlay();
+    }
     showControls();
-  } else{
-    clearTimeout(tapTimer);tapCount=1;tapZone=zone;
-    tapTimer=setTimeout(()=>{tapCount=0;controlsOn?null:showControls()},250);
+  } else {
+    clearTimeout(tapTimer); tapCount = 1; tapZone = zone;
+    tapTimer = setTimeout(() => { tapCount = 0; if (!controlsOn) showControls(); }, 250);
   }
-},{passive:true});
+}, { passive: true });
 
 function flashSkip(dir){
   const el=dir==='back'?skipBackEl:skipFwdEl;
@@ -727,7 +850,8 @@ function applySubtitle(content,name,broadcast){
 
   reloadTrack(shiftVtt(currentVtt,subOffset));
   // Show offset row now that subtitles are loaded
-  $('offset-row').style.display='flex';
+  $('offset-row').style.display = 'block';
+  updateOffsetDisplay();
 
   if(broadcast){
     sendSubChunked(content,name);
@@ -748,12 +872,41 @@ function reloadTrack(vtt){
   },100);
 }
 
-/* Offset */
-function adjustOffset(delta){
-  subOffset=Math.round((subOffset+delta)*10)/10;
-  offDisplay.textContent=(subOffset>=0?'+':'')+subOffset.toFixed(1)+'s';
-  if(currentVtt) reloadTrack(shiftVtt(currentVtt,subOffset));
-  send({type:'subtitle_offset',offset:subOffset});
+/* ── Offset ── */
+function adjustOffset(delta) {
+  subOffset = Math.round((subOffset + delta) * 10) / 10;
+  updateOffsetDisplay();
+  if (currentVtt) reloadTrack(shiftVtt(currentVtt, subOffset));
+  send({ type: 'subtitle_offset', offset: subOffset });
+  // Don't close panel — user may want to keep adjusting
+}
+
+function startOffsetEdit() {
+  const display = $('off-display');
+  const input   = $('off-input');
+  display.style.display = 'none';
+  input.style.display   = 'block';
+  input.value           = subOffset;
+  // Short delay so the element is visible before focus (needed on some mobile browsers)
+  setTimeout(() => { input.focus(); input.select(); }, 50);
+}
+
+function finishOffsetEdit() {
+  const display = $('off-display');
+  const input   = $('off-input');
+  const val     = parseFloat(input.value);
+  if (!isNaN(val)) {
+    subOffset = Math.round(val * 10) / 10;
+    if (currentVtt) reloadTrack(shiftVtt(currentVtt, subOffset));
+    send({ type: 'subtitle_offset', offset: subOffset });
+  }
+  updateOffsetDisplay();
+  display.style.display = '';
+  input.style.display   = 'none';
+}
+
+function updateOffsetDisplay() {
+  $('off-display').textContent = (subOffset >= 0 ? '+' : '') + subOffset.toFixed(1) + 's';
 }
 
 /* Style controls */
