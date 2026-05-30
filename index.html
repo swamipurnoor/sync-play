@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -257,8 +256,34 @@ input{font-family:inherit;outline:none;-webkit-user-select:text;user-select:text
 #toast.show{opacity:1}
 .toast-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
 
-/* ── SUBTITLE STYLING (overridden by JS) ── */
-video::cue{background:rgba(0,0,0,.55);color:#fff;font-family:'DM Sans',sans-serif;font-size:1.1em;line-height:1.4}
+/* ── SUBTITLE DISPLAY (JS-rendered, always in sync with currentTime) ── */
+#sub-display {
+  position: absolute;
+  bottom: 16px;
+  left: 5%; right: 5%;
+  text-align: center;
+  pointer-events: none;
+  z-index: 50;
+  display: none;
+  transition: bottom 0.25s ease;
+}
+#sub-display.ctrl-up {
+  /* Move above controls bar when controls are visible */
+  bottom: 115px;
+}
+#sub-text {
+  display: inline-block;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.1em;
+  line-height: 1.5;
+  padding: 4px 10px;
+  border-radius: 5px;
+  white-space: pre-line;
+  word-break: break-word;
+  max-width: 100%;
+}
 
 /* ── FULLSCREEN ── */
 #player:fullscreen,#player:-webkit-full-screen,#player:-moz-full-screen{width:100%!important;height:100%!important;margin:0;padding:0;background:#000}
@@ -351,6 +376,7 @@ video::cue{background:rgba(0,0,0,.55);color:#fff;font-family:'DM Sans',sans-seri
       <input type="file" id="sub-input" accept=".srt,.vtt,.ass,.ssa" style="display:none"/>
 
       <div id="buffer-spinner"></div>
+      <div id="sub-display"><span id="sub-text"></span></div>
       <div id="skip-back" class="skip-ripple skip-left">
         <div class="skip-arc"></div>
         <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
@@ -475,13 +501,14 @@ let tapTimer=null, tapCount=0, tapZone='';
 let skipFlashTimer={back:null,fwd:null};
 
 /* ── Subtitle state ── */
-let subOn=false, subObjectUrl=null;
-let rawSubContent=null, rawSubName=null;  // original for offset re-apply
-let currentVtt=null;                       // converted VTT (pre-offset)
-let subOffset=0;                           // seconds, can be negative
-let subChunks={};
-let subSize=1.1, subColor='#ffffff', subBg=0.55;
-const SUB_CHUNK=16*1024;
+let subOn = false;
+let rawSubContent = null, rawSubName = null; // original file content for re-sending
+let currentVtt    = null;                     // converted VTT — stored for re-parsing if needed
+let parsedCues    = [];                       // [{start, end, text}] — JS-rendered, never drifts
+let subOffset     = 0;                        // seconds (positive = delay subs)
+let subChunks     = {};
+let subSize = 1.1, subColor = '#ffffff', subBg = 0.55;
+const SUB_CHUNK = 16 * 1024;
 
 /* ── DOM ── */
 const $=id=>document.getElementById(id);
@@ -496,6 +523,7 @@ const toast=$('toast'),toastMsg=$('toast-msg');
 const spinner=$('buffer-spinner');
 const peerDot=$('peer-dot'),peerLbl=$('peer-lbl'),connDot=$('conn-dot');
 const ccBtn = $('cc-btn'), subInput = $('sub-input'), subPanel = $('sub-panel');
+const subDisplay = $('sub-display'), subText = $('sub-text');
 const skipBackEl=$('skip-back'),skipFwdEl=$('skip-fwd');
 
 /* ── Room ID gen ── */
@@ -600,7 +628,7 @@ function onMsg(m){
     case 'subtitle_offset':
       subOffset = m.offset;
       updateOffsetDisplay();
-      if (currentVtt) reloadTrack(shiftVtt(currentVtt, subOffset));
+      // No reload needed — renderer applies offset live on next timeupdate
       break;
   }
 }
@@ -663,13 +691,33 @@ video.addEventListener('seeked',()=>{
   const now=Date.now();if(now-lastSeekSend<100)return;
   lastSeekSend=now;send({type:'seek',time:video.currentTime});
 });
-video.addEventListener('timeupdate',updateSeekUI);
-video.addEventListener('progress',updateBuf);
-video.addEventListener('loadedmetadata',()=>{timeDur.textContent=fmt(video.duration)});
-video.addEventListener('ended',()=>updatePlayIcon(true));
-video.addEventListener('waiting',()=>{spinner.style.display='block'});
-video.addEventListener('canplay',()=>{spinner.style.display='none'});
-video.addEventListener('playing',()=>{spinner.style.display='none'});
+video.addEventListener('progress', updateBuf);
+video.addEventListener('loadedmetadata', () => { timeDur.textContent = fmt(video.duration); });
+video.addEventListener('ended',   () => updatePlayIcon(true));
+video.addEventListener('waiting', () => { spinner.style.display = 'block'; });
+video.addEventListener('canplay', () => { spinner.style.display = 'none'; });
+video.addEventListener('playing', () => { spinner.style.display = 'none'; });
+
+/* ── Subtitle renderer ──────────────────────────────────────────────────
+   Reads video.currentTime on every timeupdate (every ~250ms).
+   Offset is applied here at read-time, so it's always exact.
+   No <track> element used — avoids Android browser sync drift after seeks.
+──────────────────────────────────────────────────────────────────────── */
+video.addEventListener('timeupdate', () => {
+  updateSeekUI();
+  if (!subOn || !parsedCues.length) return;
+
+  // Apply offset: positive offset = subtitles appear later = subtract from currentTime
+  const t = video.currentTime - subOffset;
+  const cue = findCue(parsedCues, t);
+
+  if (cue) {
+    subText.textContent = cue.text;
+    subDisplay.style.display = 'block';
+  } else {
+    subDisplay.style.display = 'none';
+  }
+});
 video.addEventListener('pause',showControls);
 video.addEventListener('play',()=>{if(controlsOn)resetHideTimer()});
 
@@ -803,8 +851,18 @@ document.addEventListener('fullscreenchange',onFsChange);
 document.addEventListener('webkitfullscreenchange',onFsChange);
 
 /* ── Controls show/hide ── */
-function showControls(){controlsOn=true;ctrlOvl.classList.remove('hide');resetHideTimer()}
-function hideControls(){if(video.paused||isDragging)return;controlsOn=false;ctrlOvl.classList.add('hide')}
+function showControls() {
+  controlsOn = true;
+  ctrlOvl.classList.remove('hide');
+  subDisplay.classList.add('ctrl-up');
+  resetHideTimer();
+}
+function hideControls() {
+  if (video.paused || isDragging) return;
+  controlsOn = false;
+  ctrlOvl.classList.add('hide');
+  subDisplay.classList.remove('ctrl-up');
+}
 function resetHideTimer(){clearTimeout(hideTimer);if(!video.paused&&!isDragging)hideTimer=setTimeout(hideControls,3500)}
 ctrlOvl.addEventListener('touchstart',()=>resetHideTimer(),{passive:true});
 
@@ -821,10 +879,20 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ── Subtitle panel ── */
-ccBtn.addEventListener('click',e=>{
+ccBtn.addEventListener('click', e => {
   e.stopPropagation();
-  if(subPanel.classList.contains('open')){closeSubPanel();return}
-  subPanel.classList.add('open');showControls();
+  if (subPanel.classList.contains('open')) { closeSubPanel(); return; }
+  // If subtitles are loaded, toggle them on/off; otherwise open panel to load
+  if (parsedCues.length) {
+    subOn = !subOn;
+    ccBtn.classList.toggle('active', subOn);
+    if (!subOn) subDisplay.style.display = 'none';
+    showToast(subOn ? '📝 Subtitles on' : '📝 Subtitles off');
+    resetHideTimer();
+  } else {
+    subPanel.classList.add('open');
+    showControls();
+  }
 });
 function closeSubPanel(){subPanel.classList.remove('open');resetHideTimer()}
 
@@ -840,45 +908,86 @@ subInput.addEventListener('change',e=>{
   reader.readAsText(file,'UTF-8');subInput.value='';
 });
 
-function applySubtitle(content,name,broadcast){
-  rawSubContent=content;rawSubName=name;
-  const lower=name.toLowerCase();
-  if(lower.endsWith('.vtt'))      currentVtt=content;
-  else if(lower.endsWith('.srt')) currentVtt=srtToVtt(content);
-  else if(lower.endsWith('.ass')||lower.endsWith('.ssa')) currentVtt=assToVtt(content);
-  else                            currentVtt=srtToVtt(content);
+function applySubtitle(content, name, broadcast) {
+  rawSubContent = content;
+  rawSubName    = name;
 
-  reloadTrack(shiftVtt(currentVtt,subOffset));
+  const lower = name.toLowerCase();
+  if      (lower.endsWith('.vtt'))                         currentVtt = content;
+  else if (lower.endsWith('.srt'))                         currentVtt = srtToVtt(content);
+  else if (lower.endsWith('.ass') || lower.endsWith('.ssa')) currentVtt = assToVtt(content);
+  else                                                     currentVtt = srtToVtt(content);
+
+  loadCues(currentVtt);
+
   // Show offset row now that subtitles are loaded
   $('offset-row').style.display = 'block';
   updateOffsetDisplay();
 
-  if(broadcast){
-    sendSubChunked(content,name);
+  if (broadcast) {
+    sendSubChunked(content, name);
     showToast('📝 Subtitles loaded & sent to friend');
   }
 }
 
-function reloadTrack(vtt){
-  if(subObjectUrl) URL.revokeObjectURL(subObjectUrl);
-  Array.from(video.querySelectorAll('track')).forEach(t=>t.remove());
-  const blob=new Blob([vtt],{type:'text/vtt'});
-  subObjectUrl=URL.createObjectURL(blob);
-  const track=document.createElement('track');
-  track.kind='subtitles';track.src=subObjectUrl;track.default=true;
-  video.appendChild(track);
-  setTimeout(()=>{
-    if(video.textTracks[0]){video.textTracks[0].mode='showing';subOn=true;ccBtn.classList.add('active')}
-  },100);
+/* Parse VTT and store as cue objects — rendering is done via timeupdate,
+   so subtitles are always locked to video.currentTime with zero drift. */
+function loadCues(vtt) {
+  parsedCues = parseVttCues(vtt);
+  subOn      = true;
+  subDisplay.style.display = 'none'; // hide until first cue hits
+  ccBtn.classList.add('active');
 }
 
-/* ── Offset ── */
+function parseVttCues(vtt) {
+  const cues = [];
+  // Split on blank lines to get blocks
+  const blocks = vtt.split(/\n\n+/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    const tiIdx = lines.findIndex(l => l.includes('-->'));
+    if (tiIdx === -1) continue;
+
+    const [startStr, endStr] = lines[tiIdx].split('-->').map(s => s.trim().split(' ')[0]);
+    const start = vttSecs(startStr);
+    const end   = vttSecs(endStr);
+    if (isNaN(start) || isNaN(end)) continue;
+
+    // Text is everything after the timestamp line, joined
+    const text = lines.slice(tiIdx + 1).join('\n').trim();
+    if (text) cues.push({ start, end, text });
+  }
+  // Sort by start time (should already be sorted, but defensive)
+  return cues.sort((a, b) => a.start - b.start);
+}
+
+function vttSecs(ts) {
+  // Handles HH:MM:SS.mmm and MM:SS.mmm
+  const parts = ts.split(':');
+  if (parts.length === 3) {
+    return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+  }
+  return NaN;
+}
+
+function findCue(cues, t) {
+  // Linear scan with early exit — sorted, so we stop once start > t
+  for (const cue of cues) {
+    if (t >= cue.start && t <= cue.end) return cue;
+    if (cue.start > t) break;
+  }
+  return null;
+}
+
+/* ── Offset ──
+   Offset is applied directly in the timeupdate renderer (currentTime - subOffset),
+   so changing it takes effect on the very next frame — no VTT reload needed. */
 function adjustOffset(delta) {
   subOffset = Math.round((subOffset + delta) * 10) / 10;
   updateOffsetDisplay();
-  if (currentVtt) reloadTrack(shiftVtt(currentVtt, subOffset));
   send({ type: 'subtitle_offset', offset: subOffset });
-  // Don't close panel — user may want to keep adjusting
 }
 
 function startOffsetEdit() {
@@ -887,7 +996,6 @@ function startOffsetEdit() {
   display.style.display = 'none';
   input.style.display   = 'block';
   input.value           = subOffset;
-  // Short delay so the element is visible before focus (needed on some mobile browsers)
   setTimeout(() => { input.focus(); input.select(); }, 50);
 }
 
@@ -897,7 +1005,6 @@ function finishOffsetEdit() {
   const val     = parseFloat(input.value);
   if (!isNaN(val)) {
     subOffset = Math.round(val * 10) / 10;
-    if (currentVtt) reloadTrack(shiftVtt(currentVtt, subOffset));
     send({ type: 'subtitle_offset', offset: subOffset });
   }
   updateOffsetDisplay();
@@ -909,23 +1016,23 @@ function updateOffsetDisplay() {
   $('off-display').textContent = (subOffset >= 0 ? '+' : '') + subOffset.toFixed(1) + 's';
 }
 
-/* Style controls */
-function setSubSize(btn){
-  document.querySelectorAll('[data-size]').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');subSize=parseFloat(btn.dataset.size);applySubStyle();
+function setSubSize(btn) {
+  document.querySelectorAll('[data-size]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); subSize = parseFloat(btn.dataset.size); applySubStyle();
 }
-function setSubColor(btn){
-  document.querySelectorAll('[data-color]').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');subColor=btn.dataset.color;applySubStyle();
+function setSubColor(btn) {
+  document.querySelectorAll('[data-color]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); subColor = btn.dataset.color; applySubStyle();
 }
-function setSubBg(btn){
-  document.querySelectorAll('[data-bg]').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');subBg=parseFloat(btn.dataset.bg);applySubStyle();
+function setSubBg(btn) {
+  document.querySelectorAll('[data-bg]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); subBg = parseFloat(btn.dataset.bg); applySubStyle();
 }
-function applySubStyle(){
-  let s=document.getElementById('sub-style');
-  if(!s){s=document.createElement('style');s.id='sub-style';document.head.appendChild(s)}
-  s.textContent=`video::cue{font-size:${subSize}em;color:${subColor};background:rgba(0,0,0,${subBg})}`;
+function applySubStyle() {
+  // Style the JS-rendered subtitle div directly
+  subText.style.fontSize   = subSize + 'em';
+  subText.style.color      = subColor;
+  subText.style.background = `rgba(0,0,0,${subBg})`;
 }
 
 /* Send subtitle in 16KB chunks */
@@ -958,22 +1065,6 @@ function assToVtt(ass){
 function assTime(t){
   const[h,m,s]=t.split(':'),[sec,cs]=s.split('.');
   return`${h.padStart(2,'0')}:${m}:${sec}.${((parseInt(cs)||0)*10).toString().padStart(3,'0')}`;
-}
-
-/* Shift all VTT timestamps by offset seconds */
-function shiftVtt(vtt,offsetSec){
-  if(offsetSec===0)return vtt;
-  return vtt.replace(/(\d{2}:\d{2}:\d{2}\.\d{3}) --> (\d{2}:\d{2}:\d{2}\.\d{3})/g,(_,s,e)=>
-    `${shiftTs(s,offsetSec)} --> ${shiftTs(e,offsetSec)}`
-  );
-}
-function shiftTs(ts,sec){
-  const[h,m,s]=ts.split(':'),ms=Math.round(parseFloat(s)*1000);
-  let total=Math.max(0,(parseInt(h)*3600+parseInt(m)*60)*1000+ms+Math.round(sec*1000));
-  const nh=total/3600000|0;total%=3600000;
-  const nm=total/60000|0;total%=60000;
-  const ns=total/1000|0,nms=total%1000;
-  return`${String(nh).padStart(2,'0')}:${String(nm).padStart(2,'0')}:${String(ns).padStart(2,'0')}.${String(nms).padStart(3,'0')}`;
 }
 
 /* ── Toast ── */
