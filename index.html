@@ -105,34 +105,141 @@ input{font-family:inherit;outline:none;-webkit-user-select:text;user-select:text
 .skip-label{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:#fff;position:relative;z-index:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
 
 /* ── CONTROLS OVERLAY ── */
-#ctrl-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(0,0,0,.9) 0%,rgba(0,0,0,.5) 55%,transparent 100%);padding-bottom:max(16px,env(safe-area-inset-bottom));transition:opacity .25s ease;will-change:opacity}
-#ctrl-overlay.hide{opacity:0;pointer-events:none}
+#ctrl-overlay {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,0.95) 0%,
+    rgba(0,0,0,0.65) 45%,
+    rgba(0,0,0,0.15) 80%,
+    transparent      100%
+  );
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  transition: opacity 0.3s ease;
+  will-change: opacity;
+}
+#ctrl-overlay.hide { opacity: 0; pointer-events: none; }
 
 /* ── SEEK BAR ── */
-#seek-wrap{padding:4px 16px}
-#seek-row{position:relative;height:44px;display:flex;align-items:center;cursor:pointer;touch-action:none}
-#seek-track{position:relative;width:100%;height:5px;background:rgba(255,255,255,.2);border-radius:3px;transition:height .15s;pointer-events:none}
-.dragging #seek-track,#seek-row:active #seek-track{height:7px}
-#seek-buf{position:absolute;left:0;top:0;height:100%;background:rgba(255,255,255,.28);border-radius:3px;width:0%;pointer-events:none}
-#seek-prog{position:absolute;left:0;top:0;height:100%;background:var(--accent);border-radius:3px;width:0%;pointer-events:none}
-#seek-thumb{position:absolute;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;background:#fff;border-radius:50%;pointer-events:none;left:0%;opacity:0;transition:opacity .15s,transform .1s;box-shadow:0 2px 8px rgba(0,0,0,.6)}
-.dragging #seek-thumb{opacity:1;transform:translate(-50%,-50%) scale(1.2)}
-#seek-row:hover #seek-thumb{opacity:1}
-#seek-tip{position:absolute;bottom:50px;transform:translateX(-50%);background:rgba(8,8,16,.9);border:1px solid var(--border);color:#fff;padding:3px 8px;border-radius:5px;font-family:'Space Mono',monospace;font-size:11px;pointer-events:none;opacity:0;white-space:nowrap;left:0%}
-.dragging #seek-tip{opacity:1}
+#seek-wrap { padding: 0 20px 4px; }
+#seek-row {
+  position: relative;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+#seek-track {
+  position: relative;
+  width: 100%; height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
+  transition: height 0.2s cubic-bezier(.4,0,.2,1);
+  pointer-events: none;
+}
+.dragging #seek-track, #seek-row:active #seek-track { height: 6px; }
+
+#seek-buf {
+  position: absolute; left: 0; top: 0; height: 100%;
+  background: rgba(255,255,255,0.25);
+  border-radius: 4px; width: 0%;
+  pointer-events: none;
+}
+#seek-prog {
+  position: absolute; left: 0; top: 0; height: 100%;
+  background: linear-gradient(to right, var(--accent), #c084fc);
+  border-radius: 4px; width: 0%;
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba(139,92,246,0.6);
+}
+#seek-thumb {
+  position: absolute; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px; height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  pointer-events: none;
+  left: 0%; opacity: 0;
+  transition: opacity 0.15s, transform 0.15s;
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.4), 0 2px 8px rgba(0,0,0,0.6);
+}
+.dragging #seek-thumb  { opacity: 1; transform: translate(-50%,-50%) scale(1.25); }
+#seek-row:hover #seek-thumb { opacity: 1; }
+
+#seek-tip {
+  position: absolute; bottom: 44px;
+  transform: translateX(-50%);
+  background: rgba(10,8,20,0.9);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #fff;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  pointer-events: none;
+  opacity: 0;
+  white-space: nowrap;
+  left: 0%;
+}
+.dragging #seek-tip { opacity: 1; }
 
 /* ── CONTROLS BAR ── */
-#ctrl-bar{display:flex;align-items:center;padding:4px 12px 8px;gap:4px}
-#play-btn{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,transform .1s}
-#play-btn:active{background:rgba(255,255,255,.22);transform:scale(.93)}
-#play-btn svg{width:24px;height:24px;fill:#fff}
-.time-text{font-family:'Space Mono',monospace;font-size:11px;color:rgba(255,255,255,.85);white-space:nowrap;padding:0 6px}
-.ctrl-gap{flex:1}
-.icon-btn{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0;position:relative}
-.icon-btn:active{background:rgba(255,255,255,.14)}
-.icon-btn svg{width:20px;height:20px;fill:#fff}
-#cc-btn.active svg{fill:var(--accent)}
-#cc-btn.active{background:var(--accent-dim)}
+#ctrl-bar {
+  display: flex;
+  align-items: center;
+  padding: 4px 16px 10px;
+  gap: 0;
+}
+
+/* Play button */
+#play-btn {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.12s;
+  margin-right: 8px;
+}
+#play-btn:active {
+  background: rgba(255,255,255,0.28);
+  transform: scale(0.9);
+}
+#play-btn svg { width: 22px; height: 22px; fill: #fff; }
+
+/* Time display */
+.time-text {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.85);
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+#time-cur { color: #fff; font-weight: 700; }
+.time-sep { color: rgba(255,255,255,0.35); padding: 0 3px; }
+
+.ctrl-gap { flex: 1; }
+
+/* Icon buttons */
+.icon-btn {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, transform 0.12s;
+  flex-shrink: 0;
+}
+.icon-btn:active {
+  background: rgba(255,255,255,0.15);
+  transform: scale(0.9);
+}
+.icon-btn svg { width: 20px; height: 20px; fill: #fff; }
+#cc-btn.active svg { fill: var(--accent); }
+#cc-btn.active { background: var(--accent-dim); }
 
 /* ── SUBTITLE SETTINGS PANEL ── */
 #sub-panel {
@@ -263,13 +370,19 @@ input{font-family:inherit;outline:none;-webkit-user-select:text;user-select:text
   left: 5%; right: 5%;
   text-align: center;
   pointer-events: none;
-  z-index: 50;
-  display: none;
-  transition: bottom 0.25s ease;
+  /* Higher than ctrl-overlay so it renders above controls gradient */
+  z-index: 500;
+  /* Always in the render tree — opacity is toggled instead of display.
+     This is critical for Android hardware-accelerated video layers:
+     display:none/block can fail to repaint over the GPU video layer. */
+  opacity: 0;
+  transition: bottom 0.25s ease, opacity 0.1s ease;
 }
 #sub-display.ctrl-up {
-  /* Move above controls bar when controls are visible */
   bottom: 115px;
+}
+#sub-display.visible {
+  opacity: 1;
 }
 #sub-text {
   display: inline-block;
@@ -402,7 +515,7 @@ input{font-family:inherit;outline:none;-webkit-user-select:text;user-select:text
         <div id="ctrl-bar">
           <button id="play-btn"><svg id="play-svg" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
           <span class="time-text" id="time-cur">0:00</span>
-          <span class="time-text" style="color:var(--muted)">/</span>
+          <span class="time-text time-sep">/</span>
           <span class="time-text" id="time-dur">0:00</span>
           <div class="ctrl-gap"></div>
           <button class="icon-btn" id="cc-btn" title="Subtitles">
@@ -713,9 +826,9 @@ video.addEventListener('timeupdate', () => {
 
   if (cue) {
     subText.textContent = cue.text;
-    subDisplay.style.display = 'block';
+    subDisplay.classList.add('visible');
   } else {
-    subDisplay.style.display = 'none';
+    subDisplay.classList.remove('visible');
   }
 });
 video.addEventListener('pause',showControls);
@@ -835,17 +948,73 @@ function toggleFullscreen(){
   else if(video.webkitRequestFullscreen) video.webkitRequestFullscreen();
   else if(video.webkitEnterFullscreen) video.webkitEnterFullscreen();
 }
-function onFsChange(){
-  const inFs=!!(document.fullscreenElement||document.webkitFullscreenElement);
-  if(inFs){
-    player.style.position='fixed';player.style.inset='0';
-    player.style.zIndex='2147483647';player.style.width='100vw';player.style.height='100vh';player.style.background='#000';
+function onFsChange() {
+  const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+
+  if (inFs) {
+    // Overlay the player div over the fullscreen video
+    player.style.position   = 'fixed';
+    player.style.inset      = '0';
+    player.style.zIndex     = '2147483647';
+    player.style.width      = '100vw';
+    player.style.height     = '100vh';
+    player.style.background = '#000';
+
+    // Reparent sub-display to document.body so it sits above the
+    // fullscreen video compositor layer — position:fixed inside
+    // #player is not reliable above the OS-level fullscreen surface.
+    subDisplay._origParent = subDisplay.parentNode;
+    document.body.appendChild(subDisplay);
+    subDisplay.style.position = 'fixed';
+    subDisplay.style.zIndex   = '2147483647';
+    subDisplay.style.bottom   = controlsOn ? '115px' : '16px';
+    subDisplay.style.left     = '5%';
+    subDisplay.style.right    = '5%';
+
+    // Same for the subtitle settings panel
+    subPanel._origParent = subPanel.parentNode;
+    document.body.appendChild(subPanel);
+    subPanel.style.position = 'fixed';
+    subPanel.style.zIndex   = '2147483647';
+    subPanel.style.bottom   = '0';
+    subPanel.style.left     = '0';
+    subPanel.style.right    = '0';
+
   } else {
-    player.style.position='';player.style.inset='';player.style.zIndex='';player.style.width='';player.style.height='';player.style.background='';
+    // Restore player
+    player.style.position   = '';
+    player.style.inset      = '';
+    player.style.zIndex     = '';
+    player.style.width      = '';
+    player.style.height     = '';
+    player.style.background = '';
+
+    // Move sub-display back into player
+    if (subDisplay._origParent) {
+      subDisplay._origParent.appendChild(subDisplay);
+      subDisplay._origParent    = null;
+      subDisplay.style.position = '';
+      subDisplay.style.zIndex   = '';
+      subDisplay.style.bottom   = '';
+      subDisplay.style.left     = '';
+      subDisplay.style.right    = '';
+    }
+
+    // Move sub-panel back into player
+    if (subPanel._origParent) {
+      subPanel._origParent.appendChild(subPanel);
+      subPanel._origParent    = null;
+      subPanel.style.position = '';
+      subPanel.style.zIndex   = '';
+      subPanel.style.bottom   = '';
+      subPanel.style.left     = '';
+      subPanel.style.right    = '';
+    }
   }
-  fsSvg.innerHTML=inFs
-    ?'<path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3" stroke="#fff" stroke-width="2" fill="none"/>'
-    :'<path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" stroke="#fff" stroke-width="2" fill="none"/>';
+
+  fsSvg.innerHTML = inFs
+    ? '<path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3" stroke="#fff" stroke-width="2" fill="none"/>'
+    : '<path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" stroke="#fff" stroke-width="2" fill="none"/>';
 }
 document.addEventListener('fullscreenchange',onFsChange);
 document.addEventListener('webkitfullscreenchange',onFsChange);
@@ -855,6 +1024,8 @@ function showControls() {
   controlsOn = true;
   ctrlOvl.classList.remove('hide');
   subDisplay.classList.add('ctrl-up');
+  // When reparented to body during fullscreen, class has no effect — use inline style
+  if (subDisplay._origParent) subDisplay.style.bottom = '115px';
   resetHideTimer();
 }
 function hideControls() {
@@ -862,6 +1033,7 @@ function hideControls() {
   controlsOn = false;
   ctrlOvl.classList.add('hide');
   subDisplay.classList.remove('ctrl-up');
+  if (subDisplay._origParent) subDisplay.style.bottom = '16px';
 }
 function resetHideTimer(){clearTimeout(hideTimer);if(!video.paused&&!isDragging)hideTimer=setTimeout(hideControls,3500)}
 ctrlOvl.addEventListener('touchstart',()=>resetHideTimer(),{passive:true});
@@ -886,7 +1058,7 @@ ccBtn.addEventListener('click', e => {
   if (parsedCues.length) {
     subOn = !subOn;
     ccBtn.classList.toggle('active', subOn);
-    if (!subOn) subDisplay.style.display = 'none';
+    if (!subOn) subDisplay.classList.remove('visible');
     showToast(subOn ? '📝 Subtitles on' : '📝 Subtitles off');
     resetHideTimer();
   } else {
@@ -935,7 +1107,7 @@ function applySubtitle(content, name, broadcast) {
 function loadCues(vtt) {
   parsedCues = parseVttCues(vtt);
   subOn      = true;
-  subDisplay.style.display = 'none'; // hide until first cue hits
+  subDisplay.classList.remove('visible'); // hide until first cue hits
   ccBtn.classList.add('active');
 }
 
